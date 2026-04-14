@@ -1,0 +1,42 @@
+name: Codex Review Action
+description: Review a PR using locally authenticated Codex CLI on a self-hosted runner
+
+inputs:
+  repo:
+    description: owner/repo
+    required: true
+  pr_number:
+    description: Pull request number
+    required: true
+  event_name:
+    description: pull_request or issue_comment
+    required: true
+  commenter:
+    description: Comment author for issue_comment trigger
+    required: false
+    default: ""
+  max_files:
+    description: Threshold for summary-only review
+    required: false
+    default: "200"
+  max_diff_chars:
+    description: Threshold for diff truncation
+    required: false
+    default: "200000"
+
+runs:
+  using: composite
+  steps:
+    - name: Run review script
+      shell: bash
+      env:
+        INPUT_REPO: ${{ inputs.repo }}
+        INPUT_PR_NUMBER: ${{ inputs.pr_number }}
+        INPUT_EVENT_NAME: ${{ inputs.event_name }}
+        INPUT_COMMENTER: ${{ inputs.commenter }}
+        INPUT_MAX_FILES: ${{ inputs.max_files }}
+        INPUT_MAX_DIFF_CHARS: ${{ inputs.max_diff_chars }}
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        set -euo pipefail
+        bash "${{ github.action_path }}/scripts/run-review.sh"
