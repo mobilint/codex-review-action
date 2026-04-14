@@ -17,7 +17,9 @@ COMMENT_JSON="${WORKDIR}/comment.json"
 RAW_OUTPUT_FILE="${WORKDIR}/codex_raw_output.txt"
 RESPONSE_BODY_FILE="${WORKDIR}/mention-response-body.md"
 REPLY_PAYLOAD_FILE="${WORKDIR}/mention-reply-payload.json"
-export WORKDIR REPO_DIR REVIEW_DIR COMMENT_JSON RAW_OUTPUT_FILE RESPONSE_BODY_FILE REPLY_PAYLOAD_FILE
+CODEX_LOG_FILE="${WORKDIR}/codex_exec.log"
+FALLBACK_PROMPT_FILE="${WORKDIR}/codex_fallback_prompt.md"
+export WORKDIR REPO_DIR REVIEW_DIR COMMENT_JSON RAW_OUTPUT_FILE RESPONSE_BODY_FILE REPLY_PAYLOAD_FILE CODEX_LOG_FILE FALLBACK_PROMPT_FILE
 
 cleanup() {
   rm -rf "${WORKDIR}"
@@ -176,15 +178,63 @@ echo "[INFO] changed_files=${CHANGED_FILES} summary_only=${SUMMARY_ONLY} diff_si
 run_codex() {
   local prompt_file="$1"
   local output_file="$2"
+  local effective_prompt_file="$prompt_file"
+  local codex_exit=0
+  local sandbox_failure_detected="false"
 
   echo "[INFO] running codex"
+
+  rm -f "${output_file}"
+  : > "${CODEX_LOG_FILE}"
+  set +e
   (
     cd "${REPO_DIR}"
     codex exec \
       --sandbox read-only \
       --output-last-message "${output_file}" \
-      "$(cat "${prompt_file}")"
-  )
+      "$(cat "${effective_prompt_file}")"
+  ) > "${CODEX_LOG_FILE}" 2>&1
+  codex_exit=$?
+  set -e
+
+  cat "${CODEX_LOG_FILE}"
+
+  if grep -Eiq 'bwrap: loopback: Failed RTM_NEWADDR|Sandbox\(Denied|ERROR codex_core::tools::router: error=exec_command failed|could not find bubblewrap' "${CODEX_LOG_FILE}"; then
+    sandbox_failure_detected="true"
+  fi
+
+  if [[ "${sandbox_failure_detected}" == "true" ]]; then
+    echo "[WARN] Codex read-only sandbox is unavailable on this runner. Retrying without sandbox."
+    cat > "${FALLBACK_PROMPT_FILE}" <<EOF
+Runner note:
+- The standard Codex sandbox is unavailable on this self-hosted runner.
+- Do not modify files, install dependencies, or access the network.
+- Do not use MCP connectors or web tools.
+- Restrict yourself to reading the checked-out repository and .codex-review assets only.
+
+$(cat "${prompt_file}")
+EOF
+
+    : > "${CODEX_LOG_FILE}"
+    rm -f "${output_file}"
+    set +e
+    (
+      cd "${REPO_DIR}"
+      codex exec \
+        --dangerously-bypass-approvals-and-sandbox \
+        --output-last-message "${output_file}" \
+        "$(cat "${FALLBACK_PROMPT_FILE}")"
+    ) > "${CODEX_LOG_FILE}" 2>&1
+    codex_exit=$?
+    set -e
+
+    cat "${CODEX_LOG_FILE}"
+  fi
+
+  if [[ ${codex_exit} -ne 0 ]]; then
+    echo "[ERROR] Codex execution failed" >&2
+    exit "${codex_exit}"
+  fi
 
   if [[ ! -s "${output_file}" ]]; then
     echo "[ERROR] Codex did not produce output" >&2
@@ -225,6 +275,7 @@ Your task:
 4. Do not invent issues.
 5. If there are no meaningful findings, say so clearly.
 6. Use a few tasteful emoji in the summary.
+7. Do not use MCP connectors, web tools, or network access. Use only the checked-out repository and .codex-review assets.
 
 IMPORTANT OUTPUT REQUIREMENTS:
 - Output MUST be valid JSON only.
@@ -519,6 +570,7 @@ Your task:
 4. If the request is about a review thread, focus on that file and hunk first.
 5. If you need to make an inference, say that it is an inference.
 6. Do not claim to have changed code or run commands.
+7. Do not use MCP connectors, web tools, or network access. Use only the checked-out repository and .codex-review assets.
 
 Output requirements:
 - Output markdown only.
