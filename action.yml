@@ -12,7 +12,7 @@ inputs:
     description: pull_request, issue_comment, or pull_request_review_comment
     required: true
   mode:
-    description: auto for fallback review, mention for @codex-mobilint comment handling
+    description: auto for fallback review, mention for @mobilint-review comment handling
     required: false
     default: "auto"
   comment_id:

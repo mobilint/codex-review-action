@@ -181,6 +181,7 @@ run_codex() {
   local effective_prompt_file="$prompt_file"
   local codex_exit=0
   local sandbox_failure_detected="false"
+  local retried_without_sandbox="false"
 
   echo "[INFO] running codex"
 
@@ -197,13 +198,12 @@ run_codex() {
   codex_exit=$?
   set -e
 
-  cat "${CODEX_LOG_FILE}"
-
   if grep -Eiq 'bwrap: loopback: Failed RTM_NEWADDR|Sandbox\(Denied|ERROR codex_core::tools::router: error=exec_command failed|could not find bubblewrap' "${CODEX_LOG_FILE}"; then
     sandbox_failure_detected="true"
   fi
 
   if [[ "${sandbox_failure_detected}" == "true" ]]; then
+    retried_without_sandbox="true"
     echo "[WARN] Codex read-only sandbox is unavailable on this runner. Retrying without sandbox."
     cat > "${FALLBACK_PROMPT_FILE}" <<EOF
 Runner note:
@@ -227,18 +227,24 @@ EOF
     ) > "${CODEX_LOG_FILE}" 2>&1
     codex_exit=$?
     set -e
-
-    cat "${CODEX_LOG_FILE}"
   fi
 
   if [[ ${codex_exit} -ne 0 ]]; then
     echo "[ERROR] Codex execution failed" >&2
+    tail -n 120 "${CODEX_LOG_FILE}" >&2 || true
     exit "${codex_exit}"
   fi
 
   if [[ ! -s "${output_file}" ]]; then
     echo "[ERROR] Codex did not produce output" >&2
+    tail -n 120 "${CODEX_LOG_FILE}" >&2 || true
     exit 1
+  fi
+
+  if [[ "${retried_without_sandbox}" == "true" ]]; then
+    echo "[INFO] Codex completed after fallback to unsandboxed mode."
+  else
+    echo "[INFO] Codex completed in read-only sandbox."
   fi
 }
 
@@ -516,7 +522,7 @@ import os
 import re
 
 text = os.environ.get("COMMENT_BODY", "")
-text = re.sub(r'(^|[^\S\r\n])@codex-mobilint(?=[\s\W]|$)', ' ', text, flags=re.I)
+text = re.sub(r'(^|[^\S\r\n])@mobilint-review(?=[\s\W]|$)', ' ', text, flags=re.I)
 text = re.sub(r'\s+', ' ', text).strip()
 print(text)
 PY
@@ -527,7 +533,7 @@ PY
   fi
 
   cat > "${WORKDIR}/mention_prompt.md" <<EOF
-You are responding to a GitHub comment that mentioned @codex-mobilint.
+You are responding to a GitHub comment that mentioned @mobilint-review.
 
 Context:
 - Repository: ${REPO}
