@@ -9,10 +9,18 @@ inputs:
     description: Pull request number
     required: true
   event_name:
-    description: pull_request or issue_comment
+    description: pull_request, issue_comment, or pull_request_review_comment
     required: true
+  mode:
+    description: auto for fallback review, mention for @codex-mobilint comment handling
+    required: false
+    default: "auto"
+  comment_id:
+    description: Source comment id for mention-triggered runs
+    required: false
+    default: ""
   commenter:
-    description: Comment author for issue_comment trigger
+    description: Comment author for mention-triggered runs
     required: false
     default: ""
   max_files:
@@ -33,6 +41,8 @@ runs:
         INPUT_REPO: ${{ inputs.repo }}
         INPUT_PR_NUMBER: ${{ inputs.pr_number }}
         INPUT_EVENT_NAME: ${{ inputs.event_name }}
+        INPUT_MODE: ${{ inputs.mode }}
+        INPUT_COMMENT_ID: ${{ inputs.comment_id }}
         INPUT_COMMENTER: ${{ inputs.commenter }}
         INPUT_MAX_FILES: ${{ inputs.max_files }}
         INPUT_MAX_DIFF_CHARS: ${{ inputs.max_diff_chars }}

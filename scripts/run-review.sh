@@ -4,6 +4,8 @@ set -euo pipefail
 REPO="${INPUT_REPO}"
 PR_NUMBER="${INPUT_PR_NUMBER}"
 EVENT_NAME="${INPUT_EVENT_NAME}"
+MODE="${INPUT_MODE:-auto}"
+COMMENT_ID="${INPUT_COMMENT_ID:-}"
 COMMENTER="${INPUT_COMMENTER:-}"
 MAX_FILES="${INPUT_MAX_FILES:-200}"
 MAX_DIFF_CHARS="${INPUT_MAX_DIFF_CHARS:-200000}"
@@ -11,7 +13,11 @@ MAX_DIFF_CHARS="${INPUT_MAX_DIFF_CHARS:-200000}"
 WORKDIR="$(mktemp -d)"
 REPO_DIR="${WORKDIR}/repo"
 REVIEW_DIR="${REPO_DIR}/.codex-review"
-export WORKDIR REPO_DIR REVIEW_DIR
+COMMENT_JSON="${WORKDIR}/comment.json"
+RAW_OUTPUT_FILE="${WORKDIR}/codex_raw_output.txt"
+RESPONSE_BODY_FILE="${WORKDIR}/mention-response-body.md"
+REPLY_PAYLOAD_FILE="${WORKDIR}/mention-reply-payload.json"
+export WORKDIR REPO_DIR REVIEW_DIR COMMENT_JSON RAW_OUTPUT_FILE RESPONSE_BODY_FILE REPLY_PAYLOAD_FILE
 
 cleanup() {
   rm -rf "${WORKDIR}"
@@ -20,7 +26,7 @@ trap cleanup EXIT
 
 cd "${WORKDIR}"
 
-echo "[INFO] repo=${REPO} pr=${PR_NUMBER} event=${EVENT_NAME}"
+echo "[INFO] repo=${REPO} pr=${PR_NUMBER} event=${EVENT_NAME} mode=${MODE}"
 
 for cmd in gh git jq python3 codex; do
   command -v "${cmd}" >/dev/null 2>&1 || {
@@ -44,7 +50,7 @@ HEAD_SHA="$(jq -r '.headRefOid' "${WORKDIR}/pr.json")"
 
 echo "[INFO] checking out repository"
 git init "${REPO_DIR}" >/dev/null 2>&1
-git -C "${REPO_DIR}" remote add origin "https://github.com/${REPO}.git"
+git -C "${REPO_DIR}" remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git"
 git -C "${REPO_DIR}" fetch --depth=50 origin "${BASE_REF}"
 git -C "${REPO_DIR}" checkout -B base FETCH_HEAD >/dev/null 2>&1 || {
   echo "[ERROR] failed to checkout base branch ${BASE_REF}" >&2
@@ -151,7 +157,28 @@ PY
 
 echo "[INFO] changed_files=${CHANGED_FILES} summary_only=${SUMMARY_ONLY} diff_size=${DIFF_SIZE}"
 
-cat > "${WORKDIR}/review_prompt.md" <<EOF
+run_codex() {
+  local prompt_file="$1"
+  local output_file="$2"
+
+  echo "[INFO] running codex"
+  (
+    cd "${REPO_DIR}"
+    codex exec \
+      -a never \
+      --sandbox read-only \
+      --output-last-message "${output_file}" \
+      "$(cat "${prompt_file}")"
+  )
+
+  if [[ ! -s "${output_file}" ]]; then
+    echo "[ERROR] Codex did not produce output" >&2
+    exit 1
+  fi
+}
+
+run_auto_review() {
+  cat > "${WORKDIR}/review_prompt.md" <<EOF
 You are reviewing a GitHub pull request.
 
 Context:
@@ -217,29 +244,16 @@ Rules for findings:
 - If summary_only mode is true, you may return an empty findings list and focus on verdict plus suggested_next_steps.
 EOF
 
-echo "[INFO] running codex"
-(
-  cd "${REPO_DIR}"
-  codex exec \
-    -a never \
-    --sandbox read-only \
-    --output-last-message "${WORKDIR}/codex_raw_output.txt" \
-    "$(cat "${WORKDIR}/review_prompt.md")"
-)
+  run_codex "${WORKDIR}/review_prompt.md" "${RAW_OUTPUT_FILE}"
 
-if [[ ! -s "${WORKDIR}/codex_raw_output.txt" ]]; then
-  echo "[ERROR] Codex did not produce output"
-  exit 1
-fi
-
-echo "[INFO] normalizing codex JSON"
-python3 - <<'PY'
+  echo "[INFO] normalizing codex JSON"
+  python3 - <<'PY'
 from pathlib import Path
 import json
 import os
 import re
 
-src = Path(os.environ["WORKDIR"]) / "codex_raw_output.txt"
+src = Path(os.environ["RAW_OUTPUT_FILE"])
 text = src.read_text(encoding="utf-8", errors="ignore").strip()
 
 def extract_json(raw_text: str) -> str:
@@ -267,8 +281,8 @@ if not isinstance(obj["suggested_next_steps"], list):
 )
 PY
 
-echo "[INFO] filtering findings against changed hunks"
-python3 - <<'PY'
+  echo "[INFO] filtering findings against changed hunks"
+  python3 - <<'PY'
 from pathlib import Path
 import json
 import os
@@ -294,18 +308,17 @@ filtered = []
 for item in review.get("findings", []):
     path = item.get("path")
     line = item.get("line")
-    side = item.get("side", "RIGHT")
     title = item.get("title", "").strip()
     body = item.get("body", "").strip()
 
     if path not in changed_files:
-        continue
+      continue
     if not valid_line(line):
-        continue
+      continue
     if line not in changed_lines.get(path, set()):
-        continue
+      continue
     if not body:
-        continue
+      continue
 
     if title:
         body = f"**{title}**\n\n{body}"
@@ -324,8 +337,8 @@ review["findings"] = filtered[:8]
 )
 PY
 
-echo "[INFO] building review payload"
-python3 - <<'PY'
+  echo "[INFO] building review payload"
+  python3 - <<'PY'
 from pathlib import Path
 import json
 import os
@@ -338,7 +351,7 @@ steps = review.get("suggested_next_steps", [])
 findings = review.get("findings", [])
 
 body_lines = [
-    "## 🤖 Codex review",
+    "## Codex review",
     "",
     "## Verdict",
     verdict if verdict else "No meaningful findings.",
@@ -371,28 +384,189 @@ payload = {
 (workdir / "summary-body.md").write_text(payload["body"], encoding="utf-8")
 PY
 
-echo "[INFO] attempting pull request review submission"
-set +e
-REVIEW_RESPONSE=$(
-  gh api \
-    --method POST \
-    -H "Accept: application/vnd.github+json" \
-    "/repos/${REPO}/pulls/${PR_NUMBER}/reviews" \
-    --input "${WORKDIR}/review-payload.json" 2>&1
-)
-REVIEW_EXIT=$?
-set -e
+  echo "[INFO] attempting pull request review submission"
+  set +e
+  REVIEW_RESPONSE=$(
+    gh api \
+      --method POST \
+      -H "Accept: application/vnd.github+json" \
+      "/repos/${REPO}/pulls/${PR_NUMBER}/reviews" \
+      --input "${WORKDIR}/review-payload.json" 2>&1
+  )
+  REVIEW_EXIT=$?
+  set -e
 
-if [[ ${REVIEW_EXIT} -eq 0 ]]; then
-  echo "[INFO] review submitted successfully"
-  exit 0
+  if [[ ${REVIEW_EXIT} -eq 0 ]]; then
+    echo "[INFO] review submitted successfully"
+    return 0
+  fi
+
+  echo "[WARN] review submission failed, falling back to summary comment"
+  echo "${REVIEW_RESPONSE}" >&2
+
+  gh pr comment "${PR_NUMBER}" \
+    --repo "${REPO}" \
+    --body-file "${WORKDIR}/summary-body.md"
+
+  echo "[INFO] fallback summary comment posted"
+}
+
+run_mention_reply() {
+  local comment_body comment_url comment_path comment_line comment_diff_hunk comment_in_reply_to_id request_text
+
+  if [[ -z "${COMMENT_ID}" ]]; then
+    echo "[ERROR] comment_id is required for mention-triggered runs" >&2
+    exit 1
+  fi
+
+  echo "[INFO] fetching mention context"
+  if [[ "${EVENT_NAME}" == "issue_comment" ]]; then
+    gh api "/repos/${REPO}/issues/comments/${COMMENT_ID}" > "${COMMENT_JSON}"
+  elif [[ "${EVENT_NAME}" == "pull_request_review_comment" ]]; then
+    gh api "/repos/${REPO}/pulls/comments/${COMMENT_ID}" > "${COMMENT_JSON}"
+  else
+    echo "[ERROR] unsupported mention event: ${EVENT_NAME}" >&2
+    exit 1
+  fi
+
+  cp "${COMMENT_JSON}" "${REVIEW_DIR}/comment.json"
+
+  comment_body="$(jq -r '.body // ""' "${COMMENT_JSON}")"
+  comment_url="$(jq -r '.html_url // ""' "${COMMENT_JSON}")"
+  comment_path="$(jq -r '.path // ""' "${COMMENT_JSON}")"
+  comment_line="$(jq -r '(.line // .original_line // "") | tostring' "${COMMENT_JSON}")"
+  comment_diff_hunk="$(jq -r '.diff_hunk // ""' "${COMMENT_JSON}")"
+  comment_in_reply_to_id="$(jq -r '.in_reply_to_id // ""' "${COMMENT_JSON}")"
+
+  export MENTION_COMMENT_URL="${comment_url}"
+  if [[ "${EVENT_NAME}" == "pull_request_review_comment" && -z "${comment_in_reply_to_id}" ]]; then
+    export MENTION_CAN_THREAD_REPLY="true"
+  else
+    export MENTION_CAN_THREAD_REPLY="false"
+  fi
+
+  request_text="$(COMMENT_BODY="${comment_body}" python3 - <<'PY'
+import os
+import re
+
+text = os.environ.get("COMMENT_BODY", "")
+text = re.sub(r'(^|[^\S\r\n])@codex-mobilint(?=[\s\W]|$)', ' ', text, flags=re.I)
+text = re.sub(r'\s+', ' ', text).strip()
+print(text)
+PY
+)"
+
+  if [[ -z "${request_text}" ]]; then
+    request_text="Please review this pull request and respond with the most helpful answer for the requester."
+  fi
+
+  cat > "${WORKDIR}/mention_prompt.md" <<EOF
+You are responding to a GitHub comment that mentioned @codex-mobilint.
+
+Context:
+- Repository: ${REPO}
+- Pull Request: #${PR_NUMBER}
+- URL: ${PR_URL}
+- Title: ${PR_TITLE}
+- Author: ${PR_AUTHOR}
+- Base branch: ${BASE_REF}
+- Head branch: ${HEAD_REF}
+- Head SHA: ${HEAD_SHA}
+- Trigger: ${EVENT_NAME}
+- Comment author: ${COMMENTER}
+- Comment URL: ${comment_url}
+- Parsed request: ${request_text}
+- Changed files: ${CHANGED_FILES}
+- Summary only mode: ${SUMMARY_ONLY}
+
+Original comment body:
+${comment_body}
+
+Review-thread metadata:
+- Path: ${comment_path}
+- Line: ${comment_line}
+- Diff hunk:
+${comment_diff_hunk}
+
+You are running in the checked-out PR working tree.
+
+Relevant assets are available in .codex-review/:
+- .codex-review/pr.json: GitHub PR metadata
+- .codex-review/pr.diff: unified diff for this PR update
+- .codex-review/changed-files.txt: changed file paths
+- .codex-review/changed-lines.json: valid new-file line numbers for inline comments
+- .codex-review/comment.json: raw source comment metadata
+
+Your task:
+1. Understand what the commenter is asking for from the original comment and parsed request.
+2. Use the checked-out code and review assets to answer the request helpfully.
+3. If the request is to review the PR or a specific change, include only findings you can support from the code or diff.
+4. If the request is about a review thread, focus on that file and hunk first.
+5. If you need to make an inference, say that it is an inference.
+6. Do not claim to have changed code or run commands.
+
+Output requirements:
+- Output markdown only.
+- Do not use JSON.
+- Keep the reply concise but useful.
+- If there are no meaningful findings, say so clearly.
+EOF
+
+  run_codex "${WORKDIR}/mention_prompt.md" "${RAW_OUTPUT_FILE}"
+
+  python3 - <<'PY'
+from pathlib import Path
+import os
+
+raw_text = Path(os.environ["RAW_OUTPUT_FILE"]).read_text(encoding="utf-8", errors="ignore").strip()
+commenter = os.environ.get("INPUT_COMMENTER", "").strip()
+comment_url = os.environ.get("MENTION_COMMENT_URL", "").strip()
+event_name = os.environ.get("INPUT_EVENT_NAME", "").strip()
+
+body_lines = []
+if event_name == "issue_comment":
+    if commenter:
+        body_lines.append(f"@{commenter}")
+        body_lines.append("")
+    if comment_url:
+        body_lines.append(f"Replying to [the request]({comment_url}).")
+        body_lines.append("")
+elif event_name == "pull_request_review_comment" and os.environ.get("MENTION_CAN_THREAD_REPLY", "false") != "true":
+    if commenter:
+        body_lines.append(f"@{commenter}")
+        body_lines.append("")
+    if comment_url:
+        body_lines.append(f"Replying here because GitHub review-comment replies cannot nest beyond the top-level thread: [source comment]({comment_url}).")
+        body_lines.append("")
+
+body_lines.append(raw_text if raw_text else "I could not produce a meaningful response.")
+body_lines.extend([
+    "",
+    "---",
+    f"_Trigger: {event_name}_",
+])
+
+Path(os.environ["RESPONSE_BODY_FILE"]).write_text("\n".join(body_lines), encoding="utf-8")
+PY
+
+  if [[ "${EVENT_NAME}" == "pull_request_review_comment" && -z "${comment_in_reply_to_id}" ]]; then
+    echo "[INFO] replying directly to review thread"
+    jq -n --arg body "$(cat "${RESPONSE_BODY_FILE}")" '{body: $body}' > "${REPLY_PAYLOAD_FILE}"
+    gh api \
+      --method POST \
+      -H "Accept: application/vnd.github+json" \
+      "/repos/${REPO}/pulls/${PR_NUMBER}/comments/${COMMENT_ID}/replies" \
+      --input "${REPLY_PAYLOAD_FILE}"
+  else
+    echo "[INFO] posting mention response as PR comment"
+    gh pr comment "${PR_NUMBER}" \
+      --repo "${REPO}" \
+      --body-file "${RESPONSE_BODY_FILE}"
+  fi
+}
+
+if [[ "${MODE}" == "mention" ]]; then
+  run_mention_reply
+else
+  run_auto_review
 fi
-
-echo "[WARN] review submission failed, falling back to summary comment"
-echo "${REVIEW_RESPONSE}" >&2
-
-gh pr comment "${PR_NUMBER}" \
-  --repo "${REPO}" \
-  --body-file "${WORKDIR}/summary-body.md"
-
-echo "[INFO] fallback summary comment posted"
