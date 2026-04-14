@@ -10,6 +10,7 @@ COMMENTER="${INPUT_COMMENTER:-}"
 MAX_FILES="${INPUT_MAX_FILES:-200}"
 MAX_DIFF_CHARS="${INPUT_MAX_DIFF_CHARS:-200000}"
 SANDBOX_STRATEGY="${INPUT_SANDBOX_STRATEGY:-auto}"
+ALLOWED_OWNER="mobilint"
 
 WORKDIR="$(mktemp -d)"
 REPO_DIR="${WORKDIR}/repo"
@@ -28,6 +29,19 @@ cleanup() {
 trap cleanup EXIT
 
 cd "${WORKDIR}"
+
+CALLER_OWNER="${GITHUB_REPOSITORY_OWNER:-${GITHUB_REPOSITORY%%/*}}"
+TARGET_OWNER="${REPO%%/*}"
+
+if [[ "${CALLER_OWNER}" != "${ALLOWED_OWNER}" ]]; then
+  echo "[ERROR] this action can only run from ${ALLOWED_OWNER}-owned repositories (caller_owner=${CALLER_OWNER:-unknown})" >&2
+  exit 1
+fi
+
+if [[ "${TARGET_OWNER}" != "${ALLOWED_OWNER}" ]]; then
+  echo "[ERROR] this action can only review ${ALLOWED_OWNER}-owned repositories (target_owner=${TARGET_OWNER:-unknown})" >&2
+  exit 1
+fi
 
 if [[ -z "${MODE}" ]]; then
   if [[ "${EVENT_NAME}" == "pull_request" ]]; then
