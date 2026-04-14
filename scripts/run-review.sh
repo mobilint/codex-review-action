@@ -26,6 +26,22 @@ trap cleanup EXIT
 
 cd "${WORKDIR}"
 
+if [[ -z "${MODE}" ]]; then
+  if [[ "${EVENT_NAME}" == "pull_request" ]]; then
+    MODE="auto"
+  else
+    MODE="mention"
+  fi
+fi
+
+if [[ -z "${COMMENT_ID}" && "${MODE}" == "mention" && -n "${GITHUB_EVENT_PATH:-}" && -f "${GITHUB_EVENT_PATH}" ]]; then
+  COMMENT_ID="$(jq -r '.comment.id // ""' "${GITHUB_EVENT_PATH}")"
+fi
+
+if [[ -z "${COMMENTER}" && -n "${GITHUB_EVENT_PATH:-}" && -f "${GITHUB_EVENT_PATH}" ]]; then
+  COMMENTER="$(jq -r '.comment.user.login // ""' "${GITHUB_EVENT_PATH}")"
+fi
+
 echo "[INFO] repo=${REPO} pr=${PR_NUMBER} event=${EVENT_NAME} mode=${MODE}"
 
 for cmd in gh git jq python3 codex; do
