@@ -25,9 +25,11 @@ Composite GitHub Action for running Mobilint's self-hosted Codex reviewer on a p
 - `commenter`: source commenter login for mention-triggered runs.
 - `max_files`: soft limit for summary-only review mode.
 - `max_diff_chars`: soft limit for diff truncation.
+- `sandbox_strategy`: `auto` or `unsandboxed`.
 
 ## Notes
 
 - Repository checkout uses `GH_TOKEN`, so private repositories can be reviewed on the self-hosted runner.
+- `unsandboxed` is useful on runners where Codex's built-in read-only sandbox cannot start successfully.
 - Review-thread replies are posted directly when the source comment is a top-level PR review comment.
 - Nested review-comment replies are not supported by the GitHub API, so those fall back to a regular PR comment that links back to the source.

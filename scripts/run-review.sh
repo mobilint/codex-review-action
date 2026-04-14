@@ -9,6 +9,7 @@ COMMENT_ID="${INPUT_COMMENT_ID:-}"
 COMMENTER="${INPUT_COMMENTER:-}"
 MAX_FILES="${INPUT_MAX_FILES:-200}"
 MAX_DIFF_CHARS="${INPUT_MAX_DIFF_CHARS:-200000}"
+SANDBOX_STRATEGY="${INPUT_SANDBOX_STRATEGY:-auto}"
 
 WORKDIR="$(mktemp -d)"
 REPO_DIR="${WORKDIR}/repo"
@@ -44,7 +45,16 @@ if [[ -z "${COMMENTER}" && -n "${GITHUB_EVENT_PATH:-}" && -f "${GITHUB_EVENT_PAT
   COMMENTER="$(jq -r '.comment.user.login // ""' "${GITHUB_EVENT_PATH}")"
 fi
 
-echo "[INFO] repo=${REPO} pr=${PR_NUMBER} event=${EVENT_NAME} mode=${MODE}"
+case "${SANDBOX_STRATEGY}" in
+  auto|unsandboxed)
+    ;;
+  *)
+    echo "[ERROR] unsupported sandbox strategy: ${SANDBOX_STRATEGY}" >&2
+    exit 1
+    ;;
+esac
+
+echo "[INFO] repo=${REPO} pr=${PR_NUMBER} event=${EVENT_NAME} mode=${MODE} sandbox_strategy=${SANDBOX_STRATEGY}"
 
 for cmd in gh git jq python3 codex; do
   command -v "${cmd}" >/dev/null 2>&1 || {
@@ -178,42 +188,61 @@ echo "[INFO] changed_files=${CHANGED_FILES} summary_only=${SUMMARY_ONLY} diff_si
 run_codex() {
   local prompt_file="$1"
   local output_file="$2"
-  local effective_prompt_file="$prompt_file"
   local codex_exit=0
   local sandbox_failure_detected="false"
   local retried_without_sandbox="false"
+  local started_unsandboxed="false"
 
   echo "[INFO] running codex"
 
-  rm -f "${output_file}"
-  : > "${CODEX_LOG_FILE}"
-  set +e
-  (
-    cd "${REPO_DIR}"
-    codex exec \
-      --sandbox read-only \
-      --output-last-message "${output_file}" \
-      "$(cat "${effective_prompt_file}")"
-  ) > "${CODEX_LOG_FILE}" 2>&1
-  codex_exit=$?
-  set -e
-
-  if grep -Eiq 'bwrap: loopback: Failed RTM_NEWADDR|Sandbox\(Denied|ERROR codex_core::tools::router: error=exec_command failed|could not find bubblewrap' "${CODEX_LOG_FILE}"; then
-    sandbox_failure_detected="true"
-  fi
-
-  if [[ "${sandbox_failure_detected}" == "true" ]]; then
-    retried_without_sandbox="true"
-    echo "[WARN] Codex read-only sandbox is unavailable on this runner. Retrying without sandbox."
-    cat > "${FALLBACK_PROMPT_FILE}" <<EOF
+  cat > "${FALLBACK_PROMPT_FILE}" <<EOF
 Runner note:
-- The standard Codex sandbox is unavailable on this self-hosted runner.
+- This self-hosted review runner may execute Codex without its built-in sandbox.
 - Do not modify files, install dependencies, or access the network.
 - Do not use MCP connectors or web tools.
 - Restrict yourself to reading the checked-out repository and .codex-review assets only.
 
 $(cat "${prompt_file}")
 EOF
+
+  if [[ "${SANDBOX_STRATEGY}" == "auto" ]]; then
+    rm -f "${output_file}"
+    : > "${CODEX_LOG_FILE}"
+    set +e
+    (
+      cd "${REPO_DIR}"
+      codex exec \
+        --sandbox read-only \
+        --output-last-message "${output_file}" \
+        "$(cat "${prompt_file}")"
+    ) > "${CODEX_LOG_FILE}" 2>&1
+    codex_exit=$?
+    set -e
+
+    if grep -Eiq 'bwrap: loopback: Failed RTM_NEWADDR|Sandbox\(Denied|ERROR codex_core::tools::router: error=exec_command failed|could not find bubblewrap' "${CODEX_LOG_FILE}"; then
+      sandbox_failure_detected="true"
+    fi
+
+    if [[ "${sandbox_failure_detected}" == "true" ]]; then
+      retried_without_sandbox="true"
+      echo "[WARN] Codex read-only sandbox is unavailable on this runner. Retrying without sandbox."
+      : > "${CODEX_LOG_FILE}"
+      rm -f "${output_file}"
+      set +e
+      (
+        cd "${REPO_DIR}"
+        codex exec \
+          --dangerously-bypass-approvals-and-sandbox \
+          --output-last-message "${output_file}" \
+          "$(cat "${FALLBACK_PROMPT_FILE}")"
+      ) > "${CODEX_LOG_FILE}" 2>&1
+      codex_exit=$?
+      set -e
+    fi
+  else
+    retried_without_sandbox="true"
+    started_unsandboxed="true"
+    echo "[INFO] sandbox_strategy=unsandboxed; skipping read-only sandbox probe."
 
     : > "${CODEX_LOG_FILE}"
     rm -f "${output_file}"
@@ -241,7 +270,9 @@ EOF
     exit 1
   fi
 
-  if [[ "${retried_without_sandbox}" == "true" ]]; then
+  if [[ "${started_unsandboxed}" == "true" ]]; then
+    echo "[INFO] Codex completed in configured unsandboxed mode."
+  elif [[ "${retried_without_sandbox}" == "true" ]]; then
     echo "[INFO] Codex completed after fallback to unsandboxed mode."
   else
     echo "[INFO] Codex completed in read-only sandbox."
