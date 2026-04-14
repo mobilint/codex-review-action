@@ -181,7 +181,6 @@ run_codex() {
   (
     cd "${REPO_DIR}"
     codex exec \
-      -a never \
       --sandbox read-only \
       --output-last-message "${output_file}" \
       "$(cat "${prompt_file}")"
