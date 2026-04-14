@@ -221,7 +221,8 @@ echo "[INFO] running codex"
 (
   cd "${REPO_DIR}"
   codex exec \
-    --approval-mode full-auto \
+    -a never \
+    --sandbox read-only \
     --output-last-message "${WORKDIR}/codex_raw_output.txt" \
     "$(cat "${WORKDIR}/review_prompt.md")"
 )
