@@ -23,7 +23,6 @@ COMMENT_JSON="${WORKDIR}/comment.json"
 RAW_OUTPUT_FILE="${WORKDIR}/codex_raw_output.txt"
 REPLY_PAYLOAD_FILE="${WORKDIR}/mention-reply-payload.json"
 CODEX_LOG_FILE="${WORKDIR}/codex_exec.log"
-CODEX_LIMIT_FILE="${WORKDIR}/codex_limit.txt"
 FALLBACK_PROMPT_FILE="${WORKDIR}/codex_fallback_prompt.md"
 REVIEW_JSON_FILE="${WORKDIR}/review.json"
 FILTERED_REVIEW_JSON_FILE="${WORKDIR}/review.filtered.json"
@@ -31,7 +30,7 @@ REVIEW_PAYLOAD_FILE="${WORKDIR}/review-payload.json"
 SUMMARY_BODY_FILE="${WORKDIR}/summary-body.md"
 AUTO_PROMPT_FILE="${WORKDIR}/review_prompt.md"
 MENTION_PROMPT_FILE="${WORKDIR}/mention_prompt.md"
-export WORKDIR REPO_DIR REVIEW_DIR COMMENT_JSON RAW_OUTPUT_FILE REPLY_PAYLOAD_FILE CODEX_LOG_FILE CODEX_LIMIT_FILE FALLBACK_PROMPT_FILE
+export WORKDIR REPO_DIR REVIEW_DIR COMMENT_JSON RAW_OUTPUT_FILE REPLY_PAYLOAD_FILE CODEX_LOG_FILE FALLBACK_PROMPT_FILE
 
 cleanup() {
   rm -rf "${WORKDIR}"
@@ -77,7 +76,6 @@ build_review_payload() {
     --output "${REVIEW_PAYLOAD_FILE}" \
     --summary-output "${SUMMARY_BODY_FILE}" \
     --trigger "${trigger}" \
-    --limit-file "${CODEX_LIMIT_FILE}" \
     --commenter "${commenter}" \
     --comment-url "${comment_url}"
 }
@@ -227,7 +225,6 @@ EOF
     echo "[INFO] Codex completed in read-only sandbox."
   fi
 
-  python3 "${SCRIPT_DIR}/extract-codex-limit.py" --log "${CODEX_LOG_FILE}" --output "${CODEX_LIMIT_FILE}"
 }
 
 resolve_context() {

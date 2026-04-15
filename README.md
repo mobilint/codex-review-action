@@ -15,7 +15,6 @@ Composite GitHub Action for running Mobilint's self-hosted Codex reviewer on a p
 - `scripts/render-prompt.py`: renders prompt templates with runtime values.
 - `scripts/prepare-review-assets.py`: prepares `.codex-review` assets, including changed-line metadata.
 - `scripts/review-json.py`: normalizes Codex JSON, filters findings to valid changed lines, and builds GitHub review payloads.
-- `scripts/extract-codex-limit.py`: extracts remaining limit or quota information from Codex CLI logs when available.
 
 ## Required runner tools
 
@@ -24,6 +23,7 @@ Composite GitHub Action for running Mobilint's self-hosted Codex reviewer on a p
 - `jq`
 - `python3`
 - `codex`
+- `bubblewrap` (`bwrap`) when you want Codex's built-in sandbox modes to work on Linux runners
 
 ## Inputs
 
@@ -49,6 +49,6 @@ Composite GitHub Action for running Mobilint's self-hosted Codex reviewer on a p
 
 - Repository checkout uses `GH_TOKEN`, so private repositories can be reviewed on the self-hosted runner.
 - `unsandboxed` is useful on runners where Codex's built-in read-only sandbox cannot start successfully.
-- When Codex CLI logs a recognizable remaining-limit or quota line, the action appends it to the footer of the posted review/comment.
+- The default `sandbox_strategy: auto` first tries Codex's read-only sandbox. On Linux, that typically requires `bubblewrap` (`bwrap`) to be installed on the runner. If sandbox startup fails, the action falls back to unsandboxed execution.
 - Mention-triggered runs now use the same inline-review submission path as automatic reviews when valid diff positions are available.
 - When a mention comes from an existing PR review thread, the action replies in that thread instead of creating a new top-level PR comment.

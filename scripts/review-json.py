@@ -74,7 +74,7 @@ def filter_command(args: argparse.Namespace) -> int:
     return 0
 
 
-def build_body(review: dict, trigger: str, limit_text: str, commenter: str = "", comment_url: str = "") -> str:
+def build_body(review: dict, trigger: str, commenter: str = "", comment_url: str = "") -> str:
     verdict = review.get("verdict", "").strip()
     steps = review.get("suggested_next_steps", [])
     body_lines = ["## Codex review", ""]
@@ -99,18 +99,14 @@ def build_body(review: dict, trigger: str, limit_text: str, commenter: str = "",
     body_lines.extend(["", "---", f"_Trigger: {trigger}_"])
     if comment_url:
         body_lines.append(f"_Source: {comment_url}_")
-    if limit_text:
-        body_lines.append(f"_CLI limit: {limit_text}_")
     return "\n".join(body_lines)
 
 
 def build_payload_command(args: argparse.Namespace) -> int:
     review = json.loads(Path(args.input).read_text(encoding="utf-8"))
-    limit_text = Path(args.limit_file).read_text(encoding="utf-8", errors="ignore").strip() if args.limit_file else ""
     body = build_body(
         review,
         trigger=args.trigger,
-        limit_text=limit_text,
         commenter=args.commenter,
         comment_url=args.comment_url,
     )
@@ -145,7 +141,6 @@ def main() -> int:
     build.add_argument("--output", required=True)
     build.add_argument("--summary-output", required=True)
     build.add_argument("--trigger", required=True)
-    build.add_argument("--limit-file")
     build.add_argument("--commenter", default="")
     build.add_argument("--comment-url", default="")
     build.set_defaults(func=build_payload_command)
