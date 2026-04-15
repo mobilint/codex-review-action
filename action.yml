@@ -9,14 +9,14 @@ inputs:
     description: Pull request number
     required: true
   event_name:
-    description: pull_request, issue_comment, or pull_request_review_comment
+    description: pull_request, issue_comment, pull_request_review_comment, or pull_request_review
     required: true
   mode:
     description: auto for fallback review, mention for @mobilint-review comment handling
     required: false
     default: "auto"
   comment_id:
-    description: Source comment id for mention-triggered runs
+    description: Source discussion item id for mention-triggered runs
     required: false
     default: ""
   commenter:

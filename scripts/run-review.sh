@@ -52,11 +52,25 @@ if [[ -z "${MODE}" ]]; then
 fi
 
 if [[ -z "${COMMENT_ID}" && "${MODE}" == "mention" && -n "${GITHUB_EVENT_PATH:-}" && -f "${GITHUB_EVENT_PATH}" ]]; then
-  COMMENT_ID="$(jq -r '.comment.id // ""' "${GITHUB_EVENT_PATH}")"
+  case "${EVENT_NAME}" in
+    issue_comment|pull_request_review_comment)
+      COMMENT_ID="$(jq -r '.comment.id // ""' "${GITHUB_EVENT_PATH}")"
+      ;;
+    pull_request_review)
+      COMMENT_ID="$(jq -r '.review.id // ""' "${GITHUB_EVENT_PATH}")"
+      ;;
+  esac
 fi
 
 if [[ -z "${COMMENTER}" && -n "${GITHUB_EVENT_PATH:-}" && -f "${GITHUB_EVENT_PATH}" ]]; then
-  COMMENTER="$(jq -r '.comment.user.login // ""' "${GITHUB_EVENT_PATH}")"
+  case "${EVENT_NAME}" in
+    issue_comment|pull_request_review_comment)
+      COMMENTER="$(jq -r '.comment.user.login // ""' "${GITHUB_EVENT_PATH}")"
+      ;;
+    pull_request_review)
+      COMMENTER="$(jq -r '.review.user.login // .sender.login // ""' "${GITHUB_EVENT_PATH}")"
+      ;;
+  esac
 fi
 
 case "${SANDBOX_STRATEGY}" in
@@ -541,6 +555,8 @@ run_mention_reply() {
     gh api "/repos/${REPO}/issues/comments/${COMMENT_ID}" > "${COMMENT_JSON}"
   elif [[ "${EVENT_NAME}" == "pull_request_review_comment" ]]; then
     gh api "/repos/${REPO}/pulls/comments/${COMMENT_ID}" > "${COMMENT_JSON}"
+  elif [[ "${EVENT_NAME}" == "pull_request_review" ]]; then
+    gh api "/repos/${REPO}/pulls/${PR_NUMBER}/reviews/${COMMENT_ID}" > "${COMMENT_JSON}"
   else
     echo "[ERROR] unsupported mention event: ${EVENT_NAME}" >&2
     exit 1
@@ -578,7 +594,7 @@ PY
   fi
 
   cat > "${WORKDIR}/mention_prompt.md" <<EOF
-You are responding to a GitHub comment that mentioned @mobilint-review.
+You are responding to a GitHub pull request discussion item that mentioned @mobilint-review.
 
 Context:
 - Repository: ${REPO}
@@ -590,13 +606,13 @@ Context:
 - Head branch: ${HEAD_REF}
 - Head SHA: ${HEAD_SHA}
 - Trigger: ${EVENT_NAME}
-- Comment author: ${COMMENTER}
-- Comment URL: ${comment_url}
+- Source author: ${COMMENTER}
+- Source URL: ${comment_url}
 - Parsed request: ${request_text}
 - Changed files: ${CHANGED_FILES}
 - Summary only mode: ${SUMMARY_ONLY}
 
-Original comment body:
+Original source body:
 ${comment_body}
 
 Review-thread metadata:
@@ -612,10 +628,10 @@ Relevant assets are available in .codex-review/:
 - .codex-review/pr.diff: unified diff for this PR update
 - .codex-review/changed-files.txt: changed file paths
 - .codex-review/changed-lines.json: valid new-file line numbers for inline comments
-- .codex-review/comment.json: raw source comment metadata
+- .codex-review/comment.json: raw source discussion metadata
 
 Your task:
-1. Understand what the commenter is asking for from the original comment and parsed request.
+1. Understand what the requester is asking for from the original source body and parsed request.
 2. Use the checked-out code and review assets to answer the request helpfully.
 3. If the request is to review the PR or a specific change, include only findings you can support from the code or diff.
 4. If the request is about a review thread, focus on that file and hunk first.
@@ -648,6 +664,13 @@ if event_name == "issue_comment":
         body_lines.append("")
     if comment_url:
         body_lines.append(f"Replying to [the request]({comment_url}).")
+        body_lines.append("")
+elif event_name == "pull_request_review":
+    if commenter:
+        body_lines.append(f"@{commenter}")
+        body_lines.append("")
+    if comment_url:
+        body_lines.append(f"Replying to [the review]({comment_url}).")
         body_lines.append("")
 elif event_name == "pull_request_review_comment" and os.environ.get("MENTION_CAN_THREAD_REPLY", "false") != "true":
     if commenter:
