@@ -159,6 +159,7 @@ EOF
     (
       cd "${REPO_DIR}"
       codex exec \
+        --json \
         --sandbox read-only \
         --output-last-message "${output_file}" \
         "$(cat "${prompt_file}")"
@@ -179,6 +180,7 @@ EOF
       (
         cd "${REPO_DIR}"
         codex exec \
+          --json \
           --dangerously-bypass-approvals-and-sandbox \
           --output-last-message "${output_file}" \
           "$(cat "${FALLBACK_PROMPT_FILE}")"
@@ -196,6 +198,7 @@ EOF
     (
       cd "${REPO_DIR}"
       codex exec \
+        --json \
         --dangerously-bypass-approvals-and-sandbox \
         --output-last-message "${output_file}" \
         "$(cat "${FALLBACK_PROMPT_FILE}")"
