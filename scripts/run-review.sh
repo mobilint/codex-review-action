@@ -23,14 +23,13 @@ COMMENT_JSON="${WORKDIR}/comment.json"
 RAW_OUTPUT_FILE="${WORKDIR}/codex_raw_output.txt"
 REPLY_PAYLOAD_FILE="${WORKDIR}/mention-reply-payload.json"
 CODEX_LOG_FILE="${WORKDIR}/codex_exec.log"
-FALLBACK_PROMPT_FILE="${WORKDIR}/codex_fallback_prompt.md"
 REVIEW_JSON_FILE="${WORKDIR}/review.json"
 FILTERED_REVIEW_JSON_FILE="${WORKDIR}/review.filtered.json"
 REVIEW_PAYLOAD_FILE="${WORKDIR}/review-payload.json"
 SUMMARY_BODY_FILE="${WORKDIR}/summary-body.md"
 AUTO_PROMPT_FILE="${WORKDIR}/review_prompt.md"
 MENTION_PROMPT_FILE="${WORKDIR}/mention_prompt.md"
-export WORKDIR REPO_DIR REVIEW_DIR COMMENT_JSON RAW_OUTPUT_FILE REPLY_PAYLOAD_FILE CODEX_LOG_FILE FALLBACK_PROMPT_FILE
+export WORKDIR REPO_DIR REVIEW_DIR COMMENT_JSON RAW_OUTPUT_FILE REPLY_PAYLOAD_FILE CODEX_LOG_FILE
 
 cleanup() {
   rm -rf "${WORKDIR}"
@@ -132,59 +131,27 @@ run_codex() {
   local prompt_file="$1"
   local output_file="$2"
   local codex_exit=0
-  local sandbox_failure_detected="false"
-  local retried_without_sandbox="false"
 
   echo "[INFO] running codex"
 
-  {
-    cat <<'EOF'
-Runner note:
-- This self-hosted review runner may execute Codex without its built-in sandbox.
-- Do not modify files, install dependencies, or access the network.
-- Do not use MCP connectors or web tools.
-- Restrict yourself to reading the checked-out repository and .codex-review assets only.
+  rm -f "${output_file}"
+  : > "${CODEX_LOG_FILE}"
+  set +e
+  (
+    cd "${REPO_DIR}"
+    codex exec \
+      --json \
+      --sandbox read-only \
+      --output-last-message "${output_file}" \
+      "$(cat "${prompt_file}")"
+  ) > "${CODEX_LOG_FILE}" 2>&1
+  codex_exit=$?
+  set -e
 
-EOF
-    cat "${prompt_file}"
-  } > "${FALLBACK_PROMPT_FILE}"
-
-  if [[ "${SANDBOX_STRATEGY}" == "auto" ]]; then
-    rm -f "${output_file}"
-    : > "${CODEX_LOG_FILE}"
-    set +e
-    (
-      cd "${REPO_DIR}"
-      codex exec \
-        --json \
-        --sandbox read-only \
-        --output-last-message "${output_file}" \
-        "$(cat "${prompt_file}")"
-    ) > "${CODEX_LOG_FILE}" 2>&1
-    codex_exit=$?
-    set -e
-
-    if grep -Eiq 'bwrap: loopback: Failed RTM_NEWADDR|Sandbox\(Denied|ERROR codex_core::tools::router: error=exec_command failed|could not find bubblewrap' "${CODEX_LOG_FILE}"; then
-      sandbox_failure_detected="true"
-    fi
-
-    if [[ "${sandbox_failure_detected}" == "true" ]]; then
-      retried_without_sandbox="true"
-      echo "[WARN] Codex read-only sandbox is unavailable on this runner. Retrying without sandbox."
-      : > "${CODEX_LOG_FILE}"
-      rm -f "${output_file}"
-      set +e
-      (
-        cd "${REPO_DIR}"
-        codex exec \
-          --json \
-          --dangerously-bypass-approvals-and-sandbox \
-          --output-last-message "${output_file}" \
-          "$(cat "${FALLBACK_PROMPT_FILE}")"
-      ) > "${CODEX_LOG_FILE}" 2>&1
-      codex_exit=$?
-      set -e
-    fi
+  if grep -Eiq 'bwrap: loopback: Failed RTM_NEWADDR|could not find bubblewrap' "${CODEX_LOG_FILE}"; then
+    echo "[ERROR] Codex read-only sandbox is unavailable on this runner. Aborting instead of running unsandboxed." >&2
+    tail -n 120 "${CODEX_LOG_FILE}" >&2 || true
+    exit 1
   fi
 
   if [[ ${codex_exit} -ne 0 ]]; then
@@ -199,11 +166,7 @@ EOF
     exit 1
   fi
 
-  if [[ "${retried_without_sandbox}" == "true" ]]; then
-    echo "[INFO] Codex completed after fallback to unsandboxed mode."
-  else
-    echo "[INFO] Codex completed in read-only sandbox."
-  fi
+  echo "[INFO] Codex completed in read-only sandbox."
 
 }
 
@@ -254,7 +217,7 @@ resolve_context() {
   case "${SANDBOX_STRATEGY}" in
     auto) ;;
     *)
-      echo "[ERROR] unsupported sandbox strategy: ${SANDBOX_STRATEGY} (only auto is supported)" >&2
+      echo "[ERROR] unsupported sandbox strategy: ${SANDBOX_STRATEGY} (only 'auto' is allowed)" >&2
       exit 1
       ;;
   esac
@@ -276,15 +239,15 @@ fetch_pr_and_checkout() {
 
   echo "[INFO] checking out repository"
   git init "${REPO_DIR}" >/dev/null 2>&1
-  git -C "${REPO_DIR}" remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git"
-  git -C "${REPO_DIR}" fetch --depth=50 origin "${BASE_REF}"
+  GH_AUTH_HEADER="AUTHORIZATION: basic $(printf 'x-access-token:%s' "${GH_TOKEN}" | base64 | tr -d '\n')"
+  git -C "${REPO_DIR}" -c "http.extraheader=${GH_AUTH_HEADER}" fetch --depth=50 "https://github.com/${REPO}.git" "${BASE_REF}"
   git -C "${REPO_DIR}" checkout -B base FETCH_HEAD >/dev/null 2>&1 || {
     echo "[ERROR] failed to checkout base branch ${BASE_REF}" >&2
     exit 1
   }
 
   echo "[INFO] fetching PR head"
-  git -C "${REPO_DIR}" fetch --depth=50 origin "pull/${PR_NUMBER}/head:pr-${PR_NUMBER}"
+  git -C "${REPO_DIR}" -c "http.extraheader=${GH_AUTH_HEADER}" fetch --depth=50 "https://github.com/${REPO}.git" "pull/${PR_NUMBER}/head:pr-${PR_NUMBER}"
   git -C "${REPO_DIR}" checkout "pr-${PR_NUMBER}" >/dev/null 2>&1 || {
     echo "[ERROR] failed to checkout PR head branch pr-${PR_NUMBER}" >&2
     exit 1
@@ -293,8 +256,8 @@ fetch_pr_and_checkout() {
   MERGE_BASE="$(git -C "${REPO_DIR}" merge-base base "pr-${PR_NUMBER}" || true)"
   if [[ -z "${MERGE_BASE}" ]]; then
     echo "[WARN] merge-base not found from shallow fetch, retrying with full history"
-    git -C "${REPO_DIR}" fetch --unshallow origin "${BASE_REF}" || git -C "${REPO_DIR}" fetch origin "${BASE_REF}"
-    git -C "${REPO_DIR}" fetch origin "pull/${PR_NUMBER}/head:pr-${PR_NUMBER}"
+    git -C "${REPO_DIR}" -c "http.extraheader=${GH_AUTH_HEADER}" fetch --unshallow "https://github.com/${REPO}.git" "${BASE_REF}" || git -C "${REPO_DIR}" -c "http.extraheader=${GH_AUTH_HEADER}" fetch "https://github.com/${REPO}.git" "${BASE_REF}"
+    git -C "${REPO_DIR}" -c "http.extraheader=${GH_AUTH_HEADER}" fetch "https://github.com/${REPO}.git" "pull/${PR_NUMBER}/head:pr-${PR_NUMBER}"
     MERGE_BASE="$(git -C "${REPO_DIR}" merge-base base "pr-${PR_NUMBER}" || true)"
   fi
 
