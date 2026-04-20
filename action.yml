@@ -50,7 +50,6 @@ runs:
         INPUT_COMMENTER: ${{ inputs.commenter }}
         INPUT_MAX_FILES: ${{ inputs.max_files }}
         INPUT_MAX_DIFF_CHARS: ${{ inputs.max_diff_chars }}
-        INPUT_SANDBOX_STRATEGY: ${{ inputs.sandbox_strategy }}
         GH_TOKEN: ${{ github.token }}
       run: |
         set -euo pipefail
