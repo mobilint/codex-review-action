@@ -13,7 +13,7 @@ COMMENT_ID="${INPUT_COMMENT_ID:-}"
 COMMENTER="${INPUT_COMMENTER:-}"
 MAX_FILES="${INPUT_MAX_FILES:-200}"
 MAX_DIFF_CHARS="${INPUT_MAX_DIFF_CHARS:-200000}"
-SANDBOX_STRATEGY="${INPUT_SANDBOX_STRATEGY:-auto}"
+SANDBOX_STRATEGY="auto"
 ALLOWED_OWNER="mobilint"
 
 WORKDIR="$(mktemp -d)"
@@ -134,7 +134,6 @@ run_codex() {
   local codex_exit=0
   local sandbox_failure_detected="false"
   local retried_without_sandbox="false"
-  local started_unsandboxed="false"
 
   echo "[INFO] running codex"
 
@@ -186,23 +185,6 @@ EOF
       codex_exit=$?
       set -e
     fi
-  else
-    retried_without_sandbox="true"
-    started_unsandboxed="true"
-    echo "[INFO] sandbox_strategy=unsandboxed; skipping read-only sandbox probe."
-    : > "${CODEX_LOG_FILE}"
-    rm -f "${output_file}"
-    set +e
-    (
-      cd "${REPO_DIR}"
-      codex exec \
-        --json \
-        --dangerously-bypass-approvals-and-sandbox \
-        --output-last-message "${output_file}" \
-        "$(cat "${FALLBACK_PROMPT_FILE}")"
-    ) > "${CODEX_LOG_FILE}" 2>&1
-    codex_exit=$?
-    set -e
   fi
 
   if [[ ${codex_exit} -ne 0 ]]; then
@@ -217,9 +199,7 @@ EOF
     exit 1
   fi
 
-  if [[ "${started_unsandboxed}" == "true" ]]; then
-    echo "[INFO] Codex completed in configured unsandboxed mode."
-  elif [[ "${retried_without_sandbox}" == "true" ]]; then
+  if [[ "${retried_without_sandbox}" == "true" ]]; then
     echo "[INFO] Codex completed after fallback to unsandboxed mode."
   else
     echo "[INFO] Codex completed in read-only sandbox."
@@ -272,9 +252,9 @@ resolve_context() {
   fi
 
   case "${SANDBOX_STRATEGY}" in
-    auto|unsandboxed) ;;
+    auto) ;;
     *)
-      echo "[ERROR] unsupported sandbox strategy: ${SANDBOX_STRATEGY}" >&2
+      echo "[ERROR] unsupported sandbox strategy: ${SANDBOX_STRATEGY} (only auto is supported)" >&2
       exit 1
       ;;
   esac

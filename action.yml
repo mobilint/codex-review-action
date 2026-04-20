@@ -31,11 +31,6 @@ inputs:
     description: Threshold for diff truncation
     required: false
     default: "200000"
-  sandbox_strategy:
-    description: Codex sandbox strategy on the self-hosted runner (auto or unsandboxed)
-    required: false
-    default: "auto"
-
 runs:
   using: composite
   steps:
@@ -50,7 +45,6 @@ runs:
         INPUT_COMMENTER: ${{ inputs.commenter }}
         INPUT_MAX_FILES: ${{ inputs.max_files }}
         INPUT_MAX_DIFF_CHARS: ${{ inputs.max_diff_chars }}
-        INPUT_SANDBOX_STRATEGY: ${{ inputs.sandbox_strategy }}
         GH_TOKEN: ${{ github.token }}
       run: |
         set -euo pipefail
