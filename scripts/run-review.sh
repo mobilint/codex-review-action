@@ -217,8 +217,6 @@ run_codex() {
   local prompt_file="$1"
   local output_file="$2"
   local codex_exit=0
-  local sandbox_failure_detected="false"
-  local retried_without_sandbox="false"
   local started_unsandboxed="false"
 
   echo "[INFO] running codex"
@@ -248,27 +246,11 @@ EOF
     set -e
 
     if grep -Eiq 'bwrap: loopback: Failed RTM_NEWADDR|Sandbox\(Denied|ERROR codex_core::tools::router: error=exec_command failed|could not find bubblewrap' "${CODEX_LOG_FILE}"; then
-      sandbox_failure_detected="true"
-    fi
-
-    if [[ "${sandbox_failure_detected}" == "true" ]]; then
-      retried_without_sandbox="true"
-      echo "[WARN] Codex read-only sandbox is unavailable on this runner. Retrying without sandbox."
-      : > "${CODEX_LOG_FILE}"
-      rm -f "${output_file}"
-      set +e
-      (
-        cd "${REPO_DIR}"
-        codex exec \
-          --dangerously-bypass-approvals-and-sandbox \
-          --output-last-message "${output_file}" \
-          "$(cat "${FALLBACK_PROMPT_FILE}")"
-      ) > "${CODEX_LOG_FILE}" 2>&1
-      codex_exit=$?
-      set -e
+      echo "[ERROR] Codex read-only sandbox is unavailable on this runner. Aborting instead of running unsandboxed." >&2
+      tail -n 120 "${CODEX_LOG_FILE}" >&2 || true
+      exit 1
     fi
   else
-    retried_without_sandbox="true"
     started_unsandboxed="true"
     echo "[INFO] sandbox_strategy=unsandboxed; skipping read-only sandbox probe."
 
@@ -300,8 +282,6 @@ EOF
 
   if [[ "${started_unsandboxed}" == "true" ]]; then
     echo "[INFO] Codex completed in configured unsandboxed mode."
-  elif [[ "${retried_without_sandbox}" == "true" ]]; then
-    echo "[INFO] Codex completed after fallback to unsandboxed mode."
   else
     echo "[INFO] Codex completed in read-only sandbox."
   fi
