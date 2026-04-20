@@ -13,7 +13,6 @@ COMMENT_ID="${INPUT_COMMENT_ID:-}"
 COMMENTER="${INPUT_COMMENTER:-}"
 MAX_FILES="${INPUT_MAX_FILES:-200}"
 MAX_DIFF_CHARS="${INPUT_MAX_DIFF_CHARS:-200000}"
-SANDBOX_STRATEGY="auto"
 ALLOWED_OWNER="mobilint"
 
 WORKDIR="$(mktemp -d)"
@@ -214,13 +213,6 @@ resolve_context() {
     esac
   fi
 
-  case "${SANDBOX_STRATEGY}" in
-    auto) ;;
-    *)
-      echo "[ERROR] unsupported sandbox strategy: ${SANDBOX_STRATEGY} (only 'auto' is allowed)" >&2
-      exit 1
-      ;;
-  esac
 }
 
 fetch_pr_and_checkout() {
@@ -424,7 +416,7 @@ PY
 }
 
 resolve_context
-echo "[INFO] repo=${REPO} pr=${PR_NUMBER} event=${EVENT_NAME} mode=${MODE} sandbox_strategy=${SANDBOX_STRATEGY}"
+echo "[INFO] repo=${REPO} pr=${PR_NUMBER} event=${EVENT_NAME} mode=${MODE} sandbox=read-only"
 require_commands
 fetch_pr_and_checkout
 prepare_review_assets

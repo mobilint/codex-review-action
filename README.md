@@ -35,7 +35,6 @@ Composite GitHub Action for running Mobilint's self-hosted Codex reviewer on a p
 - `commenter`: source commenter login for mention-triggered runs.
 - `max_files`: soft limit for summary-only review mode.
 - `max_diff_chars`: soft limit for diff truncation.
-- `sandbox_strategy`: `auto` only.
 
 ## Flow
 
@@ -48,6 +47,6 @@ Composite GitHub Action for running Mobilint's self-hosted Codex reviewer on a p
 ## Notes
 
 - Repository checkout uses `GH_TOKEN`, so private repositories can be reviewed on the self-hosted runner.
-- The default `sandbox_strategy: auto` first tries Codex's read-only sandbox. On Linux, that typically requires `bubblewrap` (`bwrap`) to be installed on the runner. If sandbox startup fails, the action aborts instead of falling back to unsandboxed execution.
+- Codex always runs in a read-only sandbox. On Linux, that typically requires `bubblewrap` (`bwrap`) to be installed on the runner. If sandbox startup fails, the action aborts instead of falling back to unsandboxed execution.
 - Mention-triggered runs now use the same inline-review submission path as automatic reviews when valid diff positions are available.
 - When a mention comes from an existing PR review thread, the action replies in that thread instead of creating a new top-level PR comment.

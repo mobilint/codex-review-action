@@ -31,10 +31,6 @@ inputs:
     description: Threshold for diff truncation
     required: false
     default: "200000"
-  sandbox_strategy:
-    description: Codex sandbox strategy on the self-hosted runner (auto only)
-    required: false
-    default: "auto"
 
 runs:
   using: composite
