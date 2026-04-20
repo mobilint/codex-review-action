@@ -49,6 +49,6 @@ Composite GitHub Action for running Mobilint's self-hosted Codex reviewer on a p
 
 - Repository checkout uses `GH_TOKEN`, so private repositories can be reviewed on the self-hosted runner.
 - `unsandboxed` is useful on runners where Codex's built-in read-only sandbox cannot start successfully.
-- The default `sandbox_strategy: auto` first tries Codex's read-only sandbox. On Linux, that typically requires `bubblewrap` (`bwrap`) to be installed on the runner. If sandbox startup fails, the action falls back to unsandboxed execution.
+- The default `sandbox_strategy: auto` first tries Codex's read-only sandbox. On Linux, that typically requires `bubblewrap` (`bwrap`) to be installed on the runner. If sandbox startup fails, the action aborts instead of falling back to unsandboxed execution.
 - Mention-triggered runs now use the same inline-review submission path as automatic reviews when valid diff positions are available.
 - When a mention comes from an existing PR review thread, the action replies in that thread instead of creating a new top-level PR comment.
