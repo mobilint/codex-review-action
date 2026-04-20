@@ -163,7 +163,7 @@ EOF
     codex_exit=$?
     set -e
 
-    if grep -Eiq 'bwrap: loopback: Failed RTM_NEWADDR|could not find bubblewrap|No usable sandbox' "${CODEX_LOG_FILE}"; then
+    if grep -Eiq 'bwrap: loopback: Failed RTM_NEWADDR|could not find bubblewrap' "${CODEX_LOG_FILE}"; then
       echo "[ERROR] Codex read-only sandbox is unavailable on this runner. Aborting instead of running unsandboxed." >&2
       tail -n 120 "${CODEX_LOG_FILE}" >&2 || true
       exit 1
