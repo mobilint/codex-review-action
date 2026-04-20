@@ -106,15 +106,15 @@ HEAD_SHA="$(jq -r '.headRefOid' "${WORKDIR}/pr.json")"
 
 echo "[INFO] checking out repository"
 git init "${REPO_DIR}" >/dev/null 2>&1
-git -C "${REPO_DIR}" remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git"
-git -C "${REPO_DIR}" fetch --depth=50 origin "${BASE_REF}"
+GH_AUTH_HEADER="AUTHORIZATION: basic $(printf 'x-access-token:%s' "${GH_TOKEN}" | base64 | tr -d '\n')"
+git -C "${REPO_DIR}" -c "http.extraheader=${GH_AUTH_HEADER}" fetch --depth=50 "https://github.com/${REPO}.git" "${BASE_REF}"
 git -C "${REPO_DIR}" checkout -B base FETCH_HEAD >/dev/null 2>&1 || {
   echo "[ERROR] failed to checkout base branch ${BASE_REF}" >&2
   exit 1
 }
 
 echo "[INFO] fetching PR head"
-git -C "${REPO_DIR}" fetch --depth=50 origin "pull/${PR_NUMBER}/head:pr-${PR_NUMBER}"
+git -C "${REPO_DIR}" -c "http.extraheader=${GH_AUTH_HEADER}" fetch --depth=50 "https://github.com/${REPO}.git" "pull/${PR_NUMBER}/head:pr-${PR_NUMBER}"
 git -C "${REPO_DIR}" checkout "pr-${PR_NUMBER}" >/dev/null 2>&1 || {
   echo "[ERROR] failed to checkout PR head branch pr-${PR_NUMBER}" >&2
   exit 1
@@ -123,8 +123,8 @@ git -C "${REPO_DIR}" checkout "pr-${PR_NUMBER}" >/dev/null 2>&1 || {
 MERGE_BASE="$(git -C "${REPO_DIR}" merge-base base "pr-${PR_NUMBER}" || true)"
 if [[ -z "${MERGE_BASE}" ]]; then
   echo "[WARN] merge-base not found from shallow fetch, retrying with full history"
-  git -C "${REPO_DIR}" fetch --unshallow origin "${BASE_REF}" || git -C "${REPO_DIR}" fetch origin "${BASE_REF}"
-  git -C "${REPO_DIR}" fetch origin "pull/${PR_NUMBER}/head:pr-${PR_NUMBER}"
+  git -C "${REPO_DIR}" -c "http.extraheader=${GH_AUTH_HEADER}" fetch --unshallow "https://github.com/${REPO}.git" "${BASE_REF}" || git -C "${REPO_DIR}" -c "http.extraheader=${GH_AUTH_HEADER}" fetch "https://github.com/${REPO}.git" "${BASE_REF}"
+  git -C "${REPO_DIR}" -c "http.extraheader=${GH_AUTH_HEADER}" fetch "https://github.com/${REPO}.git" "pull/${PR_NUMBER}/head:pr-${PR_NUMBER}"
   MERGE_BASE="$(git -C "${REPO_DIR}" merge-base base "pr-${PR_NUMBER}" || true)"
 fi
 
