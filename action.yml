@@ -31,6 +31,14 @@ inputs:
     description: Threshold for diff truncation
     required: false
     default: "200000"
+  sandbox_mode:
+    description: Codex sandbox mode to request
+    required: false
+    default: "read-only"
+  allow_unsafe_no_sandbox_fallback:
+    description: Retry unsandboxed on trusted runners if the requested sandbox cannot start
+    required: false
+    default: "false"
 
 runs:
   using: composite
@@ -46,6 +54,8 @@ runs:
         INPUT_COMMENTER: ${{ inputs.commenter }}
         INPUT_MAX_FILES: ${{ inputs.max_files }}
         INPUT_MAX_DIFF_CHARS: ${{ inputs.max_diff_chars }}
+        INPUT_SANDBOX_MODE: ${{ inputs.sandbox_mode }}
+        INPUT_ALLOW_UNSAFE_NO_SANDBOX_FALLBACK: ${{ inputs.allow_unsafe_no_sandbox_fallback }}
         GH_TOKEN: ${{ github.token }}
       run: |
         set -euo pipefail

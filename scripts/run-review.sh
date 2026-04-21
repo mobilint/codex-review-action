@@ -13,6 +13,8 @@ COMMENT_ID="${INPUT_COMMENT_ID:-}"
 COMMENTER="${INPUT_COMMENTER:-}"
 MAX_FILES="${INPUT_MAX_FILES:-200}"
 MAX_DIFF_CHARS="${INPUT_MAX_DIFF_CHARS:-200000}"
+SANDBOX_MODE="${INPUT_SANDBOX_MODE:-read-only}"
+ALLOW_UNSAFE_NO_SANDBOX_FALLBACK="${INPUT_ALLOW_UNSAFE_NO_SANDBOX_FALLBACK:-false}"
 ALLOWED_OWNER="mobilint"
 
 WORKDIR="$(mktemp -d)"
@@ -70,6 +72,12 @@ check_codex_sandbox_support() {
 
   if [[ ${probe_exit} -eq 0 ]]; then
     echo "[INFO] Codex Linux sandbox probe succeeded."
+    return 0
+  fi
+
+  if [[ "${ALLOW_UNSAFE_NO_SANDBOX_FALLBACK}" == "true" ]] && is_codex_sandbox_startup_error "${SANDBOX_PROBE_LOG_FILE}"; then
+    echo "[WARN] Codex sandbox probe failed, but unsandboxed fallback is enabled for this trusted runner." >&2
+    tail -n 20 "${SANDBOX_PROBE_LOG_FILE}" >&2 || true
     return 0
   fi
 
@@ -170,8 +178,9 @@ run_codex() {
   local prompt_file="$1"
   local output_file="$2"
   local codex_exit=0
+  local unsandboxed_fallback_used=false
 
-  echo "[INFO] running codex"
+  echo "[INFO] running codex (sandbox=${SANDBOX_MODE})"
 
   rm -f "${output_file}"
   : > "${CODEX_LOG_FILE}"
@@ -180,7 +189,7 @@ run_codex() {
     cd "${REPO_DIR}"
     codex exec \
       --json \
-      --sandbox read-only \
+      --sandbox "${SANDBOX_MODE}" \
       --output-last-message "${output_file}" \
       "$(cat "${prompt_file}")"
   ) > "${CODEX_LOG_FILE}" 2>&1
@@ -188,9 +197,29 @@ run_codex() {
   set -e
 
   if is_codex_sandbox_startup_error "${CODEX_LOG_FILE}"; then
-    echo "[ERROR] Codex read-only sandbox is unavailable on this runner. Aborting instead of running unsandboxed." >&2
-    tail -n 120 "${CODEX_LOG_FILE}" >&2 || true
-    exit 1
+    if [[ "${ALLOW_UNSAFE_NO_SANDBOX_FALLBACK}" != "true" ]]; then
+      echo "[ERROR] Codex sandbox (${SANDBOX_MODE}) is unavailable on this runner. Aborting instead of running unsandboxed." >&2
+      tail -n 120 "${CODEX_LOG_FILE}" >&2 || true
+      exit 1
+    fi
+
+    echo "[WARN] Codex sandbox (${SANDBOX_MODE}) is unavailable on this runner. Retrying without sandbox because allow_unsafe_no_sandbox_fallback=true." >&2
+    tail -n 40 "${CODEX_LOG_FILE}" >&2 || true
+
+    rm -f "${output_file}"
+    : > "${CODEX_LOG_FILE}"
+    set +e
+    (
+      cd "${REPO_DIR}"
+      codex exec \
+        --json \
+        --dangerously-bypass-approvals-and-sandbox \
+        --output-last-message "${output_file}" \
+        "$(cat "${prompt_file}")"
+    ) > "${CODEX_LOG_FILE}" 2>&1
+    codex_exit=$?
+    set -e
+    unsandboxed_fallback_used=true
   fi
 
   if [[ ${codex_exit} -ne 0 ]]; then
@@ -205,7 +234,11 @@ run_codex() {
     exit 1
   fi
 
-  echo "[INFO] Codex completed in read-only sandbox."
+  if [[ "${unsandboxed_fallback_used}" == "true" ]]; then
+    echo "[WARN] Codex completed without sandbox on this trusted runner."
+  else
+    echo "[INFO] Codex completed in sandbox mode ${SANDBOX_MODE}."
+  fi
 
 }
 
@@ -456,7 +489,7 @@ PY
 }
 
 resolve_context
-echo "[INFO] repo=${REPO} pr=${PR_NUMBER} event=${EVENT_NAME} mode=${MODE} sandbox=read-only"
+echo "[INFO] repo=${REPO} pr=${PR_NUMBER} event=${EVENT_NAME} mode=${MODE} sandbox=${SANDBOX_MODE} allow_unsafe_no_sandbox_fallback=${ALLOW_UNSAFE_NO_SANDBOX_FALLBACK}"
 require_commands
 check_codex_sandbox_support
 fetch_pr_and_checkout
