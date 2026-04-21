@@ -22,13 +22,14 @@ COMMENT_JSON="${WORKDIR}/comment.json"
 RAW_OUTPUT_FILE="${WORKDIR}/codex_raw_output.txt"
 REPLY_PAYLOAD_FILE="${WORKDIR}/mention-reply-payload.json"
 CODEX_LOG_FILE="${WORKDIR}/codex_exec.log"
+SANDBOX_PROBE_LOG_FILE="${WORKDIR}/codex_sandbox_probe.log"
 REVIEW_JSON_FILE="${WORKDIR}/review.json"
 FILTERED_REVIEW_JSON_FILE="${WORKDIR}/review.filtered.json"
 REVIEW_PAYLOAD_FILE="${WORKDIR}/review-payload.json"
 SUMMARY_BODY_FILE="${WORKDIR}/summary-body.md"
 AUTO_PROMPT_FILE="${WORKDIR}/review_prompt.md"
 MENTION_PROMPT_FILE="${WORKDIR}/mention_prompt.md"
-export WORKDIR REPO_DIR REVIEW_DIR COMMENT_JSON RAW_OUTPUT_FILE REPLY_PAYLOAD_FILE CODEX_LOG_FILE
+export WORKDIR REPO_DIR REVIEW_DIR COMMENT_JSON RAW_OUTPUT_FILE REPLY_PAYLOAD_FILE CODEX_LOG_FILE SANDBOX_PROBE_LOG_FILE
 
 cleanup() {
   rm -rf "${WORKDIR}"
@@ -44,6 +45,45 @@ require_commands() {
       exit 1
     }
   done
+}
+
+is_codex_sandbox_startup_error() {
+  local log_file="$1"
+  grep -Eiq 'bwrap: loopback: Failed RTM_NEWADDR|could not find bubblewrap' "${log_file}"
+}
+
+check_codex_sandbox_support() {
+  local os_name
+  os_name="$(uname -s)"
+
+  if [[ "${os_name}" != "Linux" ]]; then
+    echo "[INFO] skipping sandbox probe on ${os_name}; Codex will use its native sandbox handling."
+    return 0
+  fi
+
+  echo "[INFO] probing Codex sandbox support on this runner"
+  : > "${SANDBOX_PROBE_LOG_FILE}"
+  set +e
+  codex sandbox linux sh -lc 'true' > "${SANDBOX_PROBE_LOG_FILE}" 2>&1
+  local probe_exit=$?
+  set -e
+
+  if [[ ${probe_exit} -eq 0 ]]; then
+    echo "[INFO] Codex Linux sandbox probe succeeded."
+    return 0
+  fi
+
+  if grep -Fq 'bwrap: loopback: Failed RTM_NEWADDR: Operation not permitted' "${SANDBOX_PROBE_LOG_FILE}"; then
+    echo "[ERROR] Codex sandbox probe failed: bubblewrap could not configure the loopback interface inside the sandbox network namespace." >&2
+    echo "[ERROR] This runner has bubblewrap installed, but its namespace permissions are not sufficient for the Codex Linux sandbox." >&2
+  elif grep -Fq 'could not find bubblewrap' "${SANDBOX_PROBE_LOG_FILE}"; then
+    echo "[ERROR] Codex sandbox probe failed: bubblewrap is required on Linux runners but is not available." >&2
+  else
+    echo "[ERROR] Codex sandbox probe failed before review execution." >&2
+  fi
+
+  tail -n 40 "${SANDBOX_PROBE_LOG_FILE}" >&2 || true
+  exit 1
 }
 
 render_prompt() {
@@ -147,7 +187,7 @@ run_codex() {
   codex_exit=$?
   set -e
 
-  if grep -Eiq 'bwrap: loopback: Failed RTM_NEWADDR|could not find bubblewrap' "${CODEX_LOG_FILE}"; then
+  if is_codex_sandbox_startup_error "${CODEX_LOG_FILE}"; then
     echo "[ERROR] Codex read-only sandbox is unavailable on this runner. Aborting instead of running unsandboxed." >&2
     tail -n 120 "${CODEX_LOG_FILE}" >&2 || true
     exit 1
@@ -418,6 +458,7 @@ PY
 resolve_context
 echo "[INFO] repo=${REPO} pr=${PR_NUMBER} event=${EVENT_NAME} mode=${MODE} sandbox=read-only"
 require_commands
+check_codex_sandbox_support
 fetch_pr_and_checkout
 prepare_review_assets
 
