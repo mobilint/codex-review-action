@@ -311,11 +311,19 @@ fetch_pr_and_checkout() {
   MERGE_BASE="$(git -C "${REPO_DIR}" merge-base base "pr-${PR_NUMBER}" || true)"
   if [[ -z "${MERGE_BASE}" ]]; then
     echo "[WARN] merge-base not found from shallow fetch, retrying with full history"
+    git -C "${REPO_DIR}" checkout base >/dev/null 2>&1 || {
+      echo "[ERROR] failed to checkout base branch before full-history retry" >&2
+      exit 1
+    }
     git -C "${REPO_DIR}" -c "http.extraheader=${GH_AUTH_HEADER}" fetch --unshallow "https://github.com/${REPO}.git" "${BASE_REF}" || git -C "${REPO_DIR}" -c "http.extraheader=${GH_AUTH_HEADER}" fetch "https://github.com/${REPO}.git" "${BASE_REF}"
     if ! git -C "${REPO_DIR}" -c "http.extraheader=${GH_AUTH_HEADER}" fetch "https://github.com/${REPO}.git" "pull/${PR_NUMBER}/head:pr-${PR_NUMBER}"; then
       echo "[WARN] failed to fetch refs/pull/${PR_NUMBER}/head during full-history retry; falling back to refs/pull/${PR_NUMBER}/merge" >&2
       git -C "${REPO_DIR}" -c "http.extraheader=${GH_AUTH_HEADER}" fetch "https://github.com/${REPO}.git" "pull/${PR_NUMBER}/merge:pr-${PR_NUMBER}"
     fi
+    git -C "${REPO_DIR}" checkout "pr-${PR_NUMBER}" >/dev/null 2>&1 || {
+      echo "[ERROR] failed to checkout PR branch pr-${PR_NUMBER} after full-history retry" >&2
+      exit 1
+    }
     MERGE_BASE="$(git -C "${REPO_DIR}" merge-base base "pr-${PR_NUMBER}" || true)"
   fi
 
