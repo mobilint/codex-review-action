@@ -67,7 +67,7 @@ check_codex_sandbox_support() {
   echo "[INFO] probing Codex sandbox support on this runner"
   : > "${SANDBOX_PROBE_LOG_FILE}"
   set +e
-  codex sandbox linux sh -lc 'true' > "${SANDBOX_PROBE_LOG_FILE}" 2>&1
+  codex sandbox sh -lc 'true' > "${SANDBOX_PROBE_LOG_FILE}" 2>&1
   local probe_exit=$?
   set -e
 
