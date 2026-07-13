@@ -44,6 +44,16 @@ Composite GitHub Action for running Mobilint's self-hosted Codex reviewer on a p
 4. Normalize and validate the returned review JSON.
 5. Submit a PR review with inline comments when possible, or fall back to a summary PR comment.
 
+## Finding priorities
+
+Every inline finding is prefixed with a visible priority badge:
+
+- `P0`: release-blocking or immediately exploitable; do not merge as written.
+- `P1`: serious correctness, security, reliability, or data-loss risk; fix before merge.
+- `P2`: bounded but actionable defect or important missing test; fix soon.
+
+Cosmetic suggestions and optional refactors are not reported as findings. During rollout, the formatter also accepts the former `high`, `medium`, and `low` severity values and maps them to `P0`, `P1`, and `P2` respectively.
+
 ## Notes
 
 - Repository checkout uses `GH_TOKEN`, so private repositories can be reviewed on the self-hosted runner.

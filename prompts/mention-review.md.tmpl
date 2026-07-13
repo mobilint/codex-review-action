@@ -55,7 +55,7 @@ IMPORTANT OUTPUT REQUIREMENTS:
       "path": "relative/file/path.ext",
       "line": 123,
       "side": "RIGHT",
-      "severity": "high|medium|low",
+      "priority": "P0|P1|P2",
       "title": "Short title",
       "body": "Concrete review comment in markdown"
     }
@@ -69,6 +69,11 @@ IMPORTANT OUTPUT REQUIREMENTS:
 Rules for findings:
 - Only include a finding when you have strong evidence from the diff or checked-out code.
 - Prefer at most 8 findings.
+- Assign exactly one priority badge to every finding:
+  - P0: release-blocking or immediately exploitable; the change must not merge as written.
+  - P1: serious correctness, security, reliability, or data-loss risk that should be fixed before merge.
+  - P2: bounded but actionable defect or important missing test that should be fixed soon.
+- Do not report cosmetic suggestions or optional refactors as findings.
 - Use side "RIGHT".
 - The "line" must be the line number in the new file version.
 - Only use file paths listed in .codex-review/changed-files.txt.

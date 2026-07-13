@@ -7,6 +7,24 @@ from pathlib import Path
 import re
 
 
+PRIORITIES = {"P0", "P1", "P2"}
+LEGACY_SEVERITY_PRIORITIES = {
+    "high": "P0",
+    "medium": "P1",
+    "low": "P2",
+}
+
+
+def finding_priority(item: dict) -> str:
+    priority = str(item.get("priority", "")).strip().upper()
+    if priority in PRIORITIES:
+        return priority
+
+    # Keep reviews produced by an older cached prompt readable during rollout.
+    severity = str(item.get("severity", "")).strip().lower()
+    return LEGACY_SEVERITY_PRIORITIES.get(severity, "P2")
+
+
 def extract_json(raw_text: str) -> str:
     raw_text = raw_text.strip()
     if raw_text.startswith("{") and raw_text.endswith("}"):
@@ -49,6 +67,7 @@ def filter_command(args: argparse.Namespace) -> int:
         line = item.get("line")
         title = item.get("title", "").strip()
         body = item.get("body", "").strip()
+        priority = finding_priority(item)
 
         if path not in changed_files:
             continue
@@ -59,8 +78,8 @@ def filter_command(args: argparse.Namespace) -> int:
         if not body:
             continue
 
-        if title:
-            body = f"**{title}**\n\n{body}"
+        heading = f"[{priority}] {title}" if title else f"[{priority}]"
+        body = f"**{heading}**\n\n{body}"
 
         filtered.append({
             "path": path,
