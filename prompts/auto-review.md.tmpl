@@ -37,6 +37,7 @@ IMPORTANT OUTPUT REQUIREMENTS:
 - Follow this schema exactly:
 
 {
+  "outcome": "findings|clean",
   "verdict": "<short markdown paragraph>",
   "findings": [
     {
@@ -55,6 +56,8 @@ IMPORTANT OUTPUT REQUIREMENTS:
 }
 
 Rules for findings:
+- Set outcome to "clean" only when the review found no significant issue to fix; a clean outcome is acknowledged with a GitHub thumbs-up reaction instead of a comment.
+- Set outcome to "findings" when any significant issue exists, including in summary-only mode when it cannot be attached to an inline finding.
 - Only include a finding when you have strong evidence from the diff or checked-out code.
 - Prefer at most 8 findings.
 - Assign exactly one priority badge to every finding:

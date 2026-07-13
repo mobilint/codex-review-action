@@ -25,6 +25,21 @@ def finding_priority(item: dict) -> str:
     return LEGACY_SEVERITY_PRIORITIES.get(severity, "P2")
 
 
+def delivery_action(review: dict, mode: str) -> str:
+    findings = review.get("findings", [])
+    if isinstance(findings, list) and findings:
+        return "comment"
+
+    outcome = str(review.get("outcome", "")).strip().lower()
+    if mode == "auto":
+        # Empty output from the older auto-review prompt meant a clean review.
+        return "reaction" if outcome in {"", "clean"} else "comment"
+
+    # Older mention prompts may contain an actual answer with no findings, so
+    # only the new prompt's explicit clean outcome can suppress that response.
+    return "reaction" if outcome == "clean" else "comment"
+
+
 def extract_json(raw_text: str) -> str:
     raw_text = raw_text.strip()
     if raw_text.startswith("{") and raw_text.endswith("}"):
@@ -139,6 +154,12 @@ def build_payload_command(args: argparse.Namespace) -> int:
     return 0
 
 
+def delivery_action_command(args: argparse.Namespace) -> int:
+    review = json.loads(Path(args.input).read_text(encoding="utf-8"))
+    print(delivery_action(review, args.mode))
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -163,6 +184,11 @@ def main() -> int:
     build.add_argument("--commenter", default="")
     build.add_argument("--comment-url", default="")
     build.set_defaults(func=build_payload_command)
+
+    delivery = subparsers.add_parser("delivery-action")
+    delivery.add_argument("--input", required=True)
+    delivery.add_argument("--mode", choices=("auto", "mention"), required=True)
+    delivery.set_defaults(func=delivery_action_command)
 
     args = parser.parse_args()
     return args.func(args)

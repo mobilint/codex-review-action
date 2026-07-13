@@ -60,6 +60,26 @@ class ReviewJsonTests(unittest.TestCase):
                 "This error path returns a successful result.",
             )
 
+    def test_clean_review_uses_reaction_only(self) -> None:
+        review = {"outcome": "clean", "findings": []}
+        self.assertEqual(review_json.delivery_action(review, "auto"), "reaction")
+        self.assertEqual(review_json.delivery_action(review, "mention"), "reaction")
+
+    def test_findings_and_written_responses_still_use_comments(self) -> None:
+        finding = {"outcome": "clean", "findings": [{"body": "problem"}]}
+        summary_finding = {"outcome": "findings", "findings": []}
+        answer = {"outcome": "response", "findings": []}
+
+        self.assertEqual(review_json.delivery_action(finding, "auto"), "comment")
+        self.assertEqual(review_json.delivery_action(summary_finding, "auto"), "comment")
+        self.assertEqual(review_json.delivery_action(answer, "mention"), "comment")
+
+    def test_legacy_mention_without_findings_keeps_its_written_response(self) -> None:
+        self.assertEqual(
+            review_json.delivery_action({"findings": []}, "mention"),
+            "comment",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

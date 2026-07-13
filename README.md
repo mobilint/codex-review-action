@@ -4,8 +4,8 @@ Composite GitHub Action for running Mobilint's self-hosted Codex reviewer on a p
 
 ## Modes
 
-- `auto`: collects the PR diff, asks Codex for structured review JSON, and posts a PR review with inline comments when possible.
-- `mention`: fetches the source PR comment, review comment, or review body, asks Codex for the same structured review format, and submits a PR review with inline comments when possible. If no valid inline comments can be posted, it falls back to a summary PR comment.
+- `auto`: collects the PR diff, asks Codex for structured review JSON, and posts a PR review with inline comments when possible. A clean review adds a 👍 reaction to the pull request without posting a comment.
+- `mention`: fetches the source PR comment, review comment, or review body, asks Codex for the same structured review format, and submits a PR review with inline comments when possible. A clean review request adds a 👍 reaction to the source comment without posting a reply. If no valid inline comments can be posted for a non-clean review, it falls back to a summary PR comment.
 
 ## Structure
 
@@ -33,6 +33,8 @@ Composite GitHub Action for running Mobilint's self-hosted Codex reviewer on a p
 - `mode`: `auto` or `mention`.
 - `comment_id`: source discussion item ID for mention-triggered runs.
 - `commenter`: source commenter login for mention-triggered runs.
+- `ack_reaction_id`: ID of the temporary 👀 reaction created by the caller.
+- `ack_reaction_target`: location of that reaction (`issue`, `issue_comment`, or `review_comment`).
 - `max_files`: soft limit for summary-only review mode.
 - `max_diff_chars`: soft limit for diff truncation.
 
@@ -42,7 +44,7 @@ Composite GitHub Action for running Mobilint's self-hosted Codex reviewer on a p
 2. Build `.codex-review` assets from the current diff.
 3. Render the appropriate prompt template and run Codex.
 4. Normalize and validate the returned review JSON.
-5. Submit a PR review with inline comments when possible, or fall back to a summary PR comment.
+5. Remove the temporary 👀 reaction, then add a 👍 reaction without a comment for a clean review; otherwise submit a PR review with inline comments when possible, or fall back to a summary PR comment.
 
 ## Finding priorities
 

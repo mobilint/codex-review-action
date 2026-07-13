@@ -23,6 +23,14 @@ inputs:
     description: Comment author for mention-triggered runs
     required: false
     default: ""
+  ack_reaction_id:
+    description: ID of the temporary eyes reaction to remove before publishing the result
+    required: false
+    default: ""
+  ack_reaction_target:
+    description: Target of the temporary eyes reaction (issue, issue_comment, or review_comment)
+    required: false
+    default: ""
   max_files:
     description: Threshold for summary-only review
     required: false
@@ -52,6 +60,8 @@ runs:
         INPUT_MODE: ${{ inputs.mode }}
         INPUT_COMMENT_ID: ${{ inputs.comment_id }}
         INPUT_COMMENTER: ${{ inputs.commenter }}
+        INPUT_ACK_REACTION_ID: ${{ inputs.ack_reaction_id }}
+        INPUT_ACK_REACTION_TARGET: ${{ inputs.ack_reaction_target }}
         INPUT_MAX_FILES: ${{ inputs.max_files }}
         INPUT_MAX_DIFF_CHARS: ${{ inputs.max_diff_chars }}
         INPUT_SANDBOX_MODE: ${{ inputs.sandbox_mode }}

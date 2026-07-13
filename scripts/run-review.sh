@@ -11,6 +11,8 @@ EVENT_NAME="${INPUT_EVENT_NAME}"
 MODE="${INPUT_MODE:-auto}"
 COMMENT_ID="${INPUT_COMMENT_ID:-}"
 COMMENTER="${INPUT_COMMENTER:-}"
+ACK_REACTION_ID="${INPUT_ACK_REACTION_ID:-}"
+ACK_REACTION_TARGET="${INPUT_ACK_REACTION_TARGET:-}"
 MAX_FILES="${INPUT_MAX_FILES:-200}"
 MAX_DIFF_CHARS="${INPUT_MAX_DIFF_CHARS:-200000}"
 SANDBOX_MODE="${INPUT_SANDBOX_MODE:-read-only}"
@@ -126,6 +128,80 @@ build_review_payload() {
     --trigger "${trigger}" \
     --commenter "${commenter}" \
     --comment-url "${comment_url}"
+}
+
+delivery_action() {
+  local mode="$1"
+  python3 "${SCRIPT_DIR}/review-json.py" delivery-action \
+    --input "${FILTERED_REVIEW_JSON_FILE}" \
+    --mode "${mode}"
+}
+
+add_thumb_reaction() {
+  local endpoint
+
+  case "${EVENT_NAME}" in
+    issue_comment)
+      endpoint="/repos/${REPO}/issues/comments/${COMMENT_ID}/reactions"
+      ;;
+    pull_request_review_comment)
+      endpoint="/repos/${REPO}/pulls/comments/${COMMENT_ID}/reactions"
+      ;;
+    *)
+      # GitHub supports reactions on pull requests, issue comments, and inline
+      # review comments, but not on a pull request review body.
+      endpoint="/repos/${REPO}/issues/${PR_NUMBER}/reactions"
+      ;;
+  esac
+
+  echo "[INFO] no significant findings; adding thumbs-up reaction"
+  gh api \
+    --method POST \
+    -H "Accept: application/vnd.github+json" \
+    "${endpoint}" \
+    -f content='+1' \
+    >/dev/null
+  echo "[INFO] thumbs-up reaction added; no review comment posted"
+}
+
+remove_eyes_reaction() {
+  local endpoint
+  local delete_exit
+
+  if [[ -z "${ACK_REACTION_ID}" ]]; then
+    return 0
+  fi
+
+  case "${ACK_REACTION_TARGET}" in
+    issue)
+      endpoint="/repos/${REPO}/issues/${PR_NUMBER}/reactions/${ACK_REACTION_ID}"
+      ;;
+    issue_comment)
+      endpoint="/repos/${REPO}/issues/comments/${COMMENT_ID}/reactions/${ACK_REACTION_ID}"
+      ;;
+    review_comment)
+      endpoint="/repos/${REPO}/pulls/comments/${COMMENT_ID}/reactions/${ACK_REACTION_ID}"
+      ;;
+    *)
+      echo "[WARN] cannot remove eyes reaction: unsupported target ${ACK_REACTION_TARGET:-missing}" >&2
+      return 0
+      ;;
+  esac
+
+  echo "[INFO] removing temporary eyes reaction"
+  set +e
+  gh api \
+    --method DELETE \
+    -H "Accept: application/vnd.github+json" \
+    "${endpoint}" \
+    >/dev/null 2>&1
+  delete_exit=$?
+  set -e
+
+  if [[ ${delete_exit} -ne 0 ]]; then
+    echo "[WARN] temporary eyes reaction could not be removed" >&2
+  fi
+  ACK_REACTION_ID=""
 }
 
 run_review_pipeline() {
@@ -383,6 +459,11 @@ run_auto_review() {
     --var "SUMMARY_ONLY=${SUMMARY_ONLY}"
 
   run_review_pipeline "${AUTO_PROMPT_FILE}" "${EVENT_NAME}"
+  remove_eyes_reaction
+  if [[ "$(delivery_action auto)" == "reaction" ]]; then
+    add_thumb_reaction
+    return 0
+  fi
   submit_review_with_fallback "pull request review" "review submitted successfully" "review submission failed, falling back to summary comment"
 }
 
@@ -473,6 +554,12 @@ PY
     "normalizing mention JSON" \
     "filtering mention findings against changed hunks" \
     "building mention review payload"
+
+  remove_eyes_reaction
+  if [[ "$(delivery_action mention)" == "reaction" ]]; then
+    add_thumb_reaction
+    return 0
+  fi
 
   if [[ -n "${thread_reply_target_id}" ]]; then
     echo "[INFO] posting mention response as review-thread reply"
