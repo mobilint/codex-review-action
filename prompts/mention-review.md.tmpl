@@ -38,10 +38,11 @@ Your task:
 1. Understand what the requester is asking for from the original source body and parsed request.
 2. Use the checked-out code and review assets to answer the request helpfully.
 3. If the request is to review the PR or a specific change, include only findings you can support from the code or diff.
-4. If the request is about a review thread, focus on that file and hunk first.
-5. If you need to make an inference, say that it is an inference.
-6. Do not claim to have changed code or run commands.
-7. Do not use MCP connectors, web tools, or network access. Use only the checked-out repository and .codex-review assets.
+4. For a review request, work iteratively: make a complete pass across the diff and relevant code, record every distinct supported finding, then make another complete pass looking specifically for issues not already found. Continue until an entire pass produces no new finding.
+5. If the request is about a review thread, focus on that file and hunk first, then continue reviewing the remaining requested scope until a complete pass yields no new finding.
+6. If you need to make an inference, say that it is an inference.
+7. Do not claim to have changed code or run commands.
+8. Do not use MCP connectors, web tools, or network access. Use only the checked-out repository and .codex-review assets.
 
 IMPORTANT OUTPUT REQUIREMENTS:
 - Output MUST be valid JSON only.
@@ -72,7 +73,8 @@ Rules for findings:
 - Set outcome to "findings" when a requested review found any significant issue, including in summary-only mode when it cannot be attached to an inline finding.
 - Set outcome to "response" when the requester asked a question or requested an explanation that needs a written answer.
 - Only include a finding when you have strong evidence from the diff or checked-out code.
-- Prefer at most 8 findings.
+- Return every distinct supported P0, P1, and P2 finding discovered in the requested scope; do not stop after the first finding or after reaching a particular count.
+- Do not report the same underlying issue more than once. When one root cause affects multiple locations, use the clearest changed line and explain the broader impact in one finding.
 - Assign exactly one priority badge to every finding:
   - P0: release-blocking or immediately exploitable; the change must not merge as written.
   - P1: serious correctness, security, reliability, or data-loss risk that should be fixed before merge.

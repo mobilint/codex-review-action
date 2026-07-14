@@ -5,7 +5,7 @@ Composite GitHub Action for running Mobilint's self-hosted Codex reviewer on a p
 ## Modes
 
 - `auto`: collects the PR diff, asks Codex for structured review JSON, and posts a PR review with inline comments when possible. A clean review adds a 👍 reaction to the pull request without posting a comment.
-- `mention`: fetches the source PR comment, review comment, or review body, asks Codex for the same structured review format, and submits a PR review with inline comments when possible. A clean review request adds a 👍 reaction to the source comment without posting a reply. If no valid inline comments can be posted for a non-clean review, it falls back to a summary PR comment.
+- `mention`: fetches the source PR comment, review comment, or review body, asks Codex to repeat complete review passes until a pass yields no new findings, and submits the resulting structured review with inline comments when possible. A clean review request adds a 👍 reaction to the source comment without posting a reply. If no valid inline comments can be posted for a non-clean review, it falls back to a summary PR comment.
 
 ## Structure
 

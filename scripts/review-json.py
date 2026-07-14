@@ -103,7 +103,8 @@ def filter_command(args: argparse.Namespace) -> int:
             "body": body,
         })
 
-    review["findings"] = filtered[:8]
+    max_findings = max(0, getattr(args, "max_findings", 0))
+    review["findings"] = filtered[:max_findings] if max_findings else filtered
     Path(args.output).write_text(json.dumps(review, ensure_ascii=False, indent=2), encoding="utf-8")
     return 0
 
@@ -174,6 +175,7 @@ def main() -> int:
     filter_parser.add_argument("--changed-files", required=True)
     filter_parser.add_argument("--changed-lines", required=True)
     filter_parser.add_argument("--output", required=True)
+    filter_parser.add_argument("--max-findings", type=int, default=0)
     filter_parser.set_defaults(func=filter_command)
 
     build = subparsers.add_parser("build-payload")

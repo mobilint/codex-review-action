@@ -60,6 +60,54 @@ class ReviewJsonTests(unittest.TestCase):
                 "This error path returns a successful result.",
             )
 
+    def test_filter_does_not_truncate_additional_findings(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            input_path = root / "review.json"
+            changed_files_path = root / "changed-files.txt"
+            changed_lines_path = root / "changed-lines.json"
+            output_path = root / "filtered.json"
+            findings = [
+                {
+                    "path": "src/example.py",
+                    "line": line,
+                    "priority": "P2",
+                    "title": f"Finding {line}",
+                    "body": f"Distinct supported issue {line}.",
+                }
+                for line in range(1, 11)
+            ]
+
+            input_path.write_text(
+                json.dumps({"findings": findings}),
+                encoding="utf-8",
+            )
+            changed_files_path.write_text("src/example.py\n", encoding="utf-8")
+            changed_lines_path.write_text(
+                json.dumps({"src/example.py": list(range(1, 11))}),
+                encoding="utf-8",
+            )
+
+            review_json.filter_command(argparse.Namespace(
+                input=str(input_path),
+                changed_files=str(changed_files_path),
+                changed_lines=str(changed_lines_path),
+                output=str(output_path),
+            ))
+
+            filtered = json.loads(output_path.read_text(encoding="utf-8"))
+            self.assertEqual(len(filtered["findings"]), 10)
+
+            review_json.filter_command(argparse.Namespace(
+                input=str(input_path),
+                changed_files=str(changed_files_path),
+                changed_lines=str(changed_lines_path),
+                output=str(output_path),
+                max_findings=8,
+            ))
+            filtered = json.loads(output_path.read_text(encoding="utf-8"))
+            self.assertEqual(len(filtered["findings"]), 8)
+
     def test_clean_review_uses_reaction_only(self) -> None:
         review = {"outcome": "clean", "findings": []}
         self.assertEqual(review_json.delivery_action(review, "auto"), "reaction")
