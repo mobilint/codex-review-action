@@ -501,6 +501,12 @@ run_mention_reply() {
   comment_diff_hunk="$(jq -r '.diff_hunk // ""' "${COMMENT_JSON}")"
   comment_in_reply_to_id="$(jq -r '.in_reply_to_id // ""' "${COMMENT_JSON}")"
 
+  if ! python3 "${SCRIPT_DIR}/comment-mentions.py" --input "${COMMENT_JSON}"; then
+    echo "[INFO] ignoring mention found only in quoted or code-formatted Markdown"
+    remove_eyes_reaction
+    return 0
+  fi
+
   thread_reply_target_id=""
   if [[ "${EVENT_NAME}" == "pull_request_review_comment" ]]; then
     if [[ -n "${comment_in_reply_to_id}" ]]; then
@@ -516,7 +522,7 @@ import os
 import re
 
 text = os.environ.get("COMMENT_BODY", "")
-text = re.sub(r'(^|[^\S\r\n])@mobilint-review(?=[\s\W]|$)', ' ', text, flags=re.I)
+text = re.sub(r'(^|[^\S\r\n])@mobilint-review(?=[\s\W]|$)', ' ', text, flags=re.I | re.M)
 text = re.sub(r'\s+', ' ', text).strip()
 print(text)
 PY
