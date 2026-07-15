@@ -1,5 +1,7 @@
 # codex-review-action
 
+[![GitHub clones](https://img.shields.io/endpoint?url=https%3A%2F%2Frawcodex-review-actionusercontent.com%2Fmobilint%2Fcodex-review-action%2Fmain%2Fcodex-review-action%2Fbadges%2Fclones.json)](https://github.com/mobilint/codex-review-action/graphs/traffic)
+
 Composite GitHub Action for running Mobilint's self-hosted Codex reviewer on a pull request.
 
 ## Modes
