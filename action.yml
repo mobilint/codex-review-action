@@ -1,0 +1,72 @@
+name: Codex Review Action
+description: Review a PR using locally authenticated Codex CLI on a self-hosted runner
+
+inputs:
+  repo:
+    description: owner/repo
+    required: true
+  pr_number:
+    description: Pull request number
+    required: true
+  event_name:
+    description: pull_request, issue_comment, pull_request_review_comment, or pull_request_review
+    required: true
+  mode:
+    description: auto for fallback review, mention for @mobilint-review comment handling
+    required: false
+    default: "auto"
+  comment_id:
+    description: Source discussion item id for mention-triggered runs
+    required: false
+    default: ""
+  commenter:
+    description: Comment author for mention-triggered runs
+    required: false
+    default: ""
+  ack_reaction_id:
+    description: ID of the temporary eyes reaction to remove before publishing the result
+    required: false
+    default: ""
+  ack_reaction_target:
+    description: Target of the temporary eyes reaction (issue, issue_comment, or review_comment)
+    required: false
+    default: ""
+  max_files:
+    description: Threshold for summary-only review
+    required: false
+    default: "200"
+  max_diff_chars:
+    description: Threshold for diff truncation
+    required: false
+    default: "200000"
+  sandbox_mode:
+    description: Codex sandbox mode to request
+    required: false
+    default: "read-only"
+  allow_unsafe_no_sandbox_fallback:
+    description: Retry unsandboxed on trusted runners if the requested sandbox cannot start
+    required: false
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - name: Run review script
+      shell: bash
+      env:
+        INPUT_REPO: ${{ inputs.repo }}
+        INPUT_PR_NUMBER: ${{ inputs.pr_number }}
+        INPUT_EVENT_NAME: ${{ inputs.event_name }}
+        INPUT_MODE: ${{ inputs.mode }}
+        INPUT_COMMENT_ID: ${{ inputs.comment_id }}
+        INPUT_COMMENTER: ${{ inputs.commenter }}
+        INPUT_ACK_REACTION_ID: ${{ inputs.ack_reaction_id }}
+        INPUT_ACK_REACTION_TARGET: ${{ inputs.ack_reaction_target }}
+        INPUT_MAX_FILES: ${{ inputs.max_files }}
+        INPUT_MAX_DIFF_CHARS: ${{ inputs.max_diff_chars }}
+        INPUT_SANDBOX_MODE: ${{ inputs.sandbox_mode }}
+        INPUT_ALLOW_UNSAFE_NO_SANDBOX_FALLBACK: ${{ inputs.allow_unsafe_no_sandbox_fallback }}
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        set -euo pipefail
+        bash "${{ github.action_path }}/scripts/run-review.sh"
