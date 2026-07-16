@@ -1,6 +1,6 @@
 # codex-review-action
 
-[![GitHub clones](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fmobilint%2Fcodex-review-action%2Fmain%2F.github%2Fbadges%2Fclones.json)](https://github.com/mobilint/codex-review-action/graphs/traffic)
+[![GitHub clones](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fmobilint%2Fcodex-review-action%2Fbadges%2F.github%2Fbadges%2Fclones.json)](https://github.com/mobilint/codex-review-action/graphs/traffic)
 
 Composite GitHub Action for running Mobilint's self-hosted Codex reviewer on a pull request.
 
