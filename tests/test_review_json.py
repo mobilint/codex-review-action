@@ -60,7 +60,7 @@ class ReviewJsonTests(unittest.TestCase):
                 "This error path returns a successful result.",
             )
 
-    def test_filter_does_not_truncate_additional_findings(self) -> None:
+    def test_filter_bounds_and_prioritizes_large_finding_sets(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             input_path = root / "review.json"
@@ -75,8 +75,10 @@ class ReviewJsonTests(unittest.TestCase):
                     "title": f"Finding {line}",
                     "body": f"Distinct supported issue {line}.",
                 }
-                for line in range(1, 11)
+                for line in range(1, 1001)
             ]
+            findings[-1]["priority"] = "P0"
+            findings[-2]["priority"] = "P1"
 
             input_path.write_text(
                 json.dumps({"findings": findings}),
@@ -84,7 +86,7 @@ class ReviewJsonTests(unittest.TestCase):
             )
             changed_files_path.write_text("src/example.py\n", encoding="utf-8")
             changed_lines_path.write_text(
-                json.dumps({"src/example.py": list(range(1, 11))}),
+                json.dumps({"src/example.py": list(range(1, 1001))}),
                 encoding="utf-8",
             )
 
@@ -96,17 +98,66 @@ class ReviewJsonTests(unittest.TestCase):
             ))
 
             filtered = json.loads(output_path.read_text(encoding="utf-8"))
-            self.assertEqual(len(filtered["findings"]), 10)
+            self.assertEqual(len(filtered["findings"]), 8)
+            self.assertEqual(filtered["omitted_findings"], 992)
+            self.assertTrue(filtered["findings"][0]["body"].startswith("**[P0]"))
+            self.assertTrue(filtered["findings"][1]["body"].startswith("**[P1]"))
 
             review_json.filter_command(argparse.Namespace(
                 input=str(input_path),
                 changed_files=str(changed_files_path),
                 changed_lines=str(changed_lines_path),
                 output=str(output_path),
-                max_findings=8,
+                max_findings=0,
             ))
             filtered = json.loads(output_path.read_text(encoding="utf-8"))
             self.assertEqual(len(filtered["findings"]), 8)
+
+            review_json.filter_command(argparse.Namespace(
+                input=str(input_path),
+                changed_files=str(changed_files_path),
+                changed_lines=str(changed_lines_path),
+                output=str(output_path),
+                max_findings=1000,
+            ))
+            filtered = json.loads(output_path.read_text(encoding="utf-8"))
+            self.assertEqual(len(filtered["findings"]), 25)
+            self.assertEqual(filtered["omitted_findings"], 975)
+
+    def test_payload_enforces_final_comment_cap_and_reports_overflow(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            input_path = root / "review.json"
+            output_path = root / "payload.json"
+            summary_path = root / "summary.md"
+            input_path.write_text(json.dumps({
+                "verdict": "Review complete.",
+                "findings": [
+                    {
+                        "path": "src/example.py",
+                        "line": line,
+                        "side": "RIGHT",
+                        "body": f"Finding {line}",
+                    }
+                    for line in range(1, 1001)
+                ],
+            }), encoding="utf-8")
+
+            review_json.build_payload_command(argparse.Namespace(
+                input=str(input_path),
+                output=str(output_path),
+                summary_output=str(summary_path),
+                trigger="issue_comment",
+                commenter="reviewer",
+                comment_url="",
+            ))
+
+            payload = json.loads(output_path.read_text(encoding="utf-8"))
+            self.assertEqual(len(payload["comments"]), 25)
+            self.assertIn(
+                "975 additional valid finding(s) were omitted",
+                payload["body"],
+            )
 
     def test_clean_review_uses_reaction_only(self) -> None:
         review = {"outcome": "clean", "findings": []}

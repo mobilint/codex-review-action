@@ -110,9 +110,9 @@ normalize_review_json() {
 }
 
 filter_findings() {
-  local max_findings_args=()
-  if [[ "${MODE}" == "auto" ]]; then
-    max_findings_args=(--max-findings 8)
+  local max_findings=8
+  if [[ "${MODE}" == "mention" ]]; then
+    max_findings=25
   fi
 
   python3 "${SCRIPT_DIR}/review-json.py" filter \
@@ -120,7 +120,7 @@ filter_findings() {
     --changed-files "${REVIEW_DIR}/changed-files.txt" \
     --changed-lines "${REVIEW_DIR}/changed-lines.json" \
     --output "${FILTERED_REVIEW_JSON_FILE}" \
-    "${max_findings_args[@]}"
+    --max-findings "${max_findings}"
 }
 
 build_review_payload() {

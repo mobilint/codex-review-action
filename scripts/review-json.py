@@ -8,6 +8,9 @@ import re
 
 
 PRIORITIES = {"P0", "P1", "P2"}
+PRIORITY_ORDER = {"P0": 0, "P1": 1, "P2": 2}
+DEFAULT_MAX_FINDINGS = 8
+MAX_PAYLOAD_FINDINGS = 25
 LEGACY_SEVERITY_PRIORITIES = {
     "high": "P0",
     "medium": "P1",
@@ -96,15 +99,20 @@ def filter_command(args: argparse.Namespace) -> int:
         heading = f"[{priority}] {title}" if title else f"[{priority}]"
         body = f"**{heading}**\n\n{body}"
 
-        filtered.append({
+        filtered.append((priority, {
             "path": path,
             "line": line,
             "side": "RIGHT",
             "body": body,
-        })
+        }))
 
-    max_findings = max(0, getattr(args, "max_findings", 0))
-    review["findings"] = filtered[:max_findings] if max_findings else filtered
+    filtered.sort(key=lambda finding: PRIORITY_ORDER[finding[0]])
+    requested_max = getattr(args, "max_findings", DEFAULT_MAX_FINDINGS)
+    if not isinstance(requested_max, int) or requested_max <= 0:
+        requested_max = DEFAULT_MAX_FINDINGS
+    max_findings = min(requested_max, MAX_PAYLOAD_FINDINGS)
+    review["findings"] = [item for _, item in filtered[:max_findings]]
+    review["omitted_findings"] = max(0, len(filtered) - max_findings)
     Path(args.output).write_text(json.dumps(review, ensure_ascii=False, indent=2), encoding="utf-8")
     return 0
 
@@ -121,9 +129,16 @@ def build_body(review: dict, trigger: str, commenter: str = "", comment_url: str
     body_lines.extend([
         "## Verdict",
         verdict if verdict else "No meaningful findings.",
-        "",
-        "## Suggested next steps",
     ])
+
+    omitted_findings = review.get("omitted_findings", 0)
+    if isinstance(omitted_findings, int) and omitted_findings > 0:
+        body_lines.extend([
+            "",
+            f"> {omitted_findings} additional valid finding(s) were omitted from inline comments to enforce the safety limit. Request a narrower review scope to inspect them.",
+        ])
+
+    body_lines.extend(["", "## Suggested next steps"])
 
     if steps:
         for step in steps:
@@ -139,6 +154,16 @@ def build_body(review: dict, trigger: str, commenter: str = "", comment_url: str
 
 def build_payload_command(args: argparse.Namespace) -> int:
     review = json.loads(Path(args.input).read_text(encoding="utf-8"))
+    findings = review.get("findings", [])
+    if not isinstance(findings, list):
+        findings = []
+    payload_overflow = max(0, len(findings) - MAX_PAYLOAD_FINDINGS)
+    existing_omitted = review.get("omitted_findings", 0)
+    if not isinstance(existing_omitted, int) or existing_omitted < 0:
+        existing_omitted = 0
+    review["omitted_findings"] = existing_omitted + payload_overflow
+    findings = findings[:MAX_PAYLOAD_FINDINGS]
+
     body = build_body(
         review,
         trigger=args.trigger,
@@ -148,7 +173,7 @@ def build_payload_command(args: argparse.Namespace) -> int:
     payload = {
         "body": body,
         "event": "COMMENT",
-        "comments": review.get("findings", []),
+        "comments": findings,
     }
     Path(args.output).write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     Path(args.summary_output).write_text(body, encoding="utf-8")
@@ -175,7 +200,7 @@ def main() -> int:
     filter_parser.add_argument("--changed-files", required=True)
     filter_parser.add_argument("--changed-lines", required=True)
     filter_parser.add_argument("--output", required=True)
-    filter_parser.add_argument("--max-findings", type=int, default=0)
+    filter_parser.add_argument("--max-findings", type=int, default=DEFAULT_MAX_FINDINGS)
     filter_parser.set_defaults(func=filter_command)
 
     build = subparsers.add_parser("build-payload")
