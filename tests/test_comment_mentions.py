@@ -36,6 +36,20 @@ class CommentMentionsTests(unittest.TestCase):
             "`@mobilint-review Review this`",
         ))
 
+    def test_inline_code_scanner_handles_large_unmatched_delimiter(self) -> None:
+        body = "x" + ("`" * 100_000) + " @mobilint-review Review this"
+        self.assertTrue(comment_mentions.has_actionable_mention(body))
+
+    def test_inline_code_scanner_preserves_unmatched_markdown(self) -> None:
+        self.assertEqual(
+            comment_mentions.strip_inline_code("before ` unmatched @name"),
+            "before ` unmatched @name",
+        )
+        self.assertEqual(
+            comment_mentions.strip_inline_code("before `code` after"),
+            "before  after",
+        )
+
     def test_direct_mention_still_triggers_when_quote_is_present(self) -> None:
         body = (
             "> @mobilint-review previous request\n\n"
