@@ -29,13 +29,13 @@ Composite GitHub Action for running Mobilint's self-hosted Codex reviewer on a p
 
 ## Inputs
 
-- `repo`: GitHub repository in `owner/repo` format.
-- `pr_number`: Pull request number.
+- `repo`: GitHub repository in `owner/repo` format (restricted to one `mobilint` repository).
+- `pr_number`: Positive numeric pull request number.
 - `event_name`: `pull_request`, `issue_comment`, `pull_request_review_comment`, or `pull_request_review`.
 - `mode`: `auto` or `mention`.
-- `comment_id`: source discussion item ID for mention-triggered runs.
+- `comment_id`: positive numeric source discussion item ID for mention-triggered runs.
 - `commenter`: source commenter login for mention-triggered runs.
-- `ack_reaction_id`: ID of the temporary 👀 reaction created by the caller.
+- `ack_reaction_id`: positive numeric ID of the temporary 👀 reaction created by the caller.
 - `ack_reaction_target`: location of that reaction (`issue`, `issue_comment`, or `review_comment`).
 - `max_files`: soft limit for summary-only review mode.
 - `max_diff_chars`: soft limit for diff truncation.
