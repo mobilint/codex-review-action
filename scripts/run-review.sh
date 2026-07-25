@@ -4,6 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 PROMPTS_DIR="${ROOT_DIR}/prompts"
+source "${SCRIPT_DIR}/validate-context.sh"
 
 REPO="${INPUT_REPO}"
 PR_NUMBER="${INPUT_PR_NUMBER}"
@@ -110,9 +111,9 @@ normalize_review_json() {
 }
 
 filter_findings() {
-  local max_findings_args=()
-  if [[ "${MODE}" == "auto" ]]; then
-    max_findings_args=(--max-findings 8)
+  local max_findings=8
+  if [[ "${MODE}" == "mention" ]]; then
+    max_findings=25
   fi
 
   python3 "${SCRIPT_DIR}/review-json.py" filter \
@@ -120,7 +121,7 @@ filter_findings() {
     --changed-files "${REVIEW_DIR}/changed-files.txt" \
     --changed-lines "${REVIEW_DIR}/changed-lines.json" \
     --output "${FILTERED_REVIEW_JSON_FILE}" \
-    "${max_findings_args[@]}"
+    --max-findings "${max_findings}"
 }
 
 build_review_payload() {
@@ -355,6 +356,14 @@ resolve_context() {
     esac
   fi
 
+  validate_review_context \
+    "${REPO}" \
+    "${PR_NUMBER}" \
+    "${EVENT_NAME}" \
+    "${MODE}" \
+    "${COMMENT_ID}" \
+    "${ACK_REACTION_ID}" \
+    "${ACK_REACTION_TARGET}"
 }
 
 fetch_pr_and_checkout() {
