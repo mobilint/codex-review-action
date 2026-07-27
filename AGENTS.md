@@ -86,6 +86,8 @@ guides, and skills together.
 - Preserve explicit `outcome` routing: `clean`, `findings`, and `response`.
 - Keep legacy priority mapping only while compatibility is documented.
 - Add regression coverage for every parser, boundary, cap, or delivery change.
+- When tests load a script with `spec_from_file_location`, reject a missing
+  spec or loader before calling `module_from_spec` or `exec_module`.
 - Prefer focused helpers over duplicating logic between shell and Python.
 - Keep generated clone badge JSON off `main`.
 

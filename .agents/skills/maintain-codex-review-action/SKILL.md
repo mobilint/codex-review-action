@@ -26,6 +26,8 @@ description: Maintain Mobilint's composite Codex PR review action. Use when chan
 - Change actionable mention semantics in `scripts/comment-mentions.py`.
 - Change API path validation in `scripts/validate-context.sh`.
 - Add focused regression tests for every behavior or security boundary.
+- Guard both the module spec and loader before dynamically importing hyphenated
+  scripts in tests.
 
 ## Preserve Invariants
 

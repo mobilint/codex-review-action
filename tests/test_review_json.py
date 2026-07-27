@@ -10,9 +10,13 @@ import unittest
 
 SCRIPT = Path(__file__).parents[1] / "scripts" / "review-json.py"
 SPEC = importlib.util.spec_from_file_location("review_json", SCRIPT)
+if SPEC is None:
+    raise ImportError(f"Unable to create a module spec for {SCRIPT}")
+LOADER = SPEC.loader
+if LOADER is None:
+    raise ImportError(f"Module spec for {SCRIPT} has no loader")
 review_json = importlib.util.module_from_spec(SPEC)
-assert SPEC.loader is not None
-SPEC.loader.exec_module(review_json)
+LOADER.exec_module(review_json)
 
 
 class ReviewJsonTests(unittest.TestCase):
