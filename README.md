@@ -61,7 +61,7 @@ Cosmetic suggestions and optional refactors are not reported as findings. During
 ## Notes
 
 - Repository checkout uses `GH_TOKEN`, so private repositories can be reviewed on the self-hosted runner.
-- Codex always runs in a read-only sandbox. On Linux, that typically requires `bubblewrap` (`bwrap`) to be installed on the runner. If sandbox startup fails, the action aborts instead of falling back to unsandboxed execution.
+- Codex runs in a read-only sandbox by default. On Linux, that typically requires `bubblewrap` (`bwrap`) to be installed on the runner. If sandbox startup fails, the action aborts unless a deliberately isolated trusted runner explicitly opts into the legacy `allow_unsafe_no_sandbox_fallback` escape hatch. Shared and public-repository callers should keep that input `false`.
 - Mention-triggered runs now use the same inline-review submission path as automatic reviews when valid diff positions are available.
 - Mentions inside Markdown blockquotes, fenced code blocks, indented code blocks, or inline code are treated as examples and do not trigger a review.
 - When a mention comes from an existing PR review thread, the action replies in that thread instead of creating a new top-level PR comment.
