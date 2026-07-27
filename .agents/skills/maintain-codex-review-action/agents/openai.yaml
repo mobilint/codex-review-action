@@ -1,0 +1,4 @@
+interface:
+  display_name: "Maintain Codex Review Action"
+  short_description: "Safely update the Codex reviewer action"
+  default_prompt: "Use $maintain-codex-review-action to update the reviewer action, tests, and synchronized documentation."

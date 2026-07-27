@@ -7,9 +7,13 @@ import unittest
 
 SCRIPT = Path(__file__).parents[1] / "scripts" / "comment-mentions.py"
 SPEC = importlib.util.spec_from_file_location("comment_mentions", SCRIPT)
+if SPEC is None:
+    raise ImportError(f"Unable to create a module spec for {SCRIPT}")
+LOADER = SPEC.loader
+if LOADER is None:
+    raise ImportError(f"Module spec for {SCRIPT} has no loader")
 comment_mentions = importlib.util.module_from_spec(SPEC)
-assert SPEC.loader is not None
-SPEC.loader.exec_module(comment_mentions)
+LOADER.exec_module(comment_mentions)
 
 
 class CommentMentionsTests(unittest.TestCase):
