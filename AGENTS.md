@@ -77,6 +77,9 @@ guides, and skills together.
 - Keep mention parsing linear-time for attacker-controlled Markdown.
 - Keep payload size and finding count bounded.
 - Do not place authentication headers in the checked-out repository config.
+- In pull-request checks, never dereference or print repository paths before
+  proving they are regular tracked files. Compare trusted Git index metadata or
+  blob IDs, and disable checkout credential persistence when it is unnecessary.
 
 ## Implementation Rules
 

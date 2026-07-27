@@ -42,6 +42,10 @@ description: Maintain Mobilint's composite Codex PR review action. Use when chan
 - Run in the read-only sandbox by default and keep the unsafe fallback
   disabled in shared or public-repository callers.
 - Validate every identifier before constructing a GitHub API path.
+- For pull-request checks, reject non-`100644` index entries and compare Git
+  blob IDs without dereferencing or printing PR-controlled working-tree paths.
+- Set `persist-credentials: false` on read-only checkouts that do not need to
+  perform authenticated Git operations.
 
 ## Update Documentation
 
