@@ -37,8 +37,8 @@ Composite GitHub Action for running Mobilint's self-hosted Codex reviewer on a p
 - `commenter`: source commenter login for mention-triggered runs.
 - `ack_reaction_id`: positive numeric ID of the temporary 👀 reaction created by the caller.
 - `ack_reaction_target`: location of that reaction (`issue`, `issue_comment`, or `review_comment`).
-- `max_files`: soft limit for summary-only review mode.
-- `max_diff_chars`: soft limit for diff truncation.
+- `max_files`: soft limit for summary-only review mode (default: `500`).
+- `max_diff_chars`: soft limit for diff truncation (default: `1000000`).
 
 ## Flow
 

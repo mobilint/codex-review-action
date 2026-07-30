@@ -33,6 +33,8 @@ description: Maintain Mobilint's composite Codex PR review action. Use when chan
 
 - Use visible `P0`, `P1`, and `P2` finding badges.
 - Keep automatic findings at 8 and final payloads at 25.
+- Keep the action's default review capacity aligned with the centralized
+  workflow at 500 files and 1,000,000 diff characters.
 - Let mention mode search exhaustively, then retain at most 25 distinct
   highest-priority findings.
 - Filter inline findings to changed files and valid changed lines.

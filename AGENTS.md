@@ -53,6 +53,8 @@ guides, and skills together.
 - Let mention reviews search repeatedly until a complete pass finds no new
   issue, then publish at most the 25 highest-priority distinct findings.
 - Keep the final GitHub review payload capped at 25 inline comments.
+- Keep the action's default review capacity synchronized with the centralized
+  workflow at 500 changed files and 1,000,000 diff characters.
 - Filter every inline finding to a changed file and valid new-file line.
 - Add 👍 without a comment for an explicitly clean review.
 - Keep response, finding, failure, and error messages visible.
