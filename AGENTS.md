@@ -36,6 +36,9 @@ the same change and run the synchronization workflow before finishing.
   `badges` branch.
 - `.github/workflows/check-agent-guides.yml`: CI guard that requires the Codex
   and Claude guide and skill copies to remain byte-identical.
+- `README.md`: public action behavior, inputs, and runner requirements.
+- `.github/README.md`: maintainer implementation, contract, CI, security, and
+  release guide.
 - `.agents/skills/maintain-codex-review-action/`: Codex maintenance skill.
 - `.claude/skills/maintain-codex-review-action/`: Claude maintenance skill.
 
@@ -115,9 +118,11 @@ Before finishing any repository change, check whether it changes:
 - sandbox, checkout, token, input-validation, or API-path boundaries;
 - the contract with the centralized `.github` workflows.
 
-If so, update `README.md`, `AGENTS.md`, `CLAUDE.md`, and both skill copies in
-the same commit. Keep each mirrored pair byte-identical. Never update only the
-Codex or only the Claude copy.
+Keep public behavior and consumption details in `README.md`; keep implementation,
+contract maintenance, CI, and release procedures in `.github/README.md`. Update
+`AGENTS.md`, `CLAUDE.md`, and both skill copies in the same commit. Keep each
+mirrored pair byte-identical. Never update only the Codex or only the Claude
+copy.
 
 ## Validation
 

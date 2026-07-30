@@ -60,7 +60,8 @@ description: Maintain Mobilint's composite Codex PR review action. Use when chan
 After changing behavior, structure, interfaces, security boundaries, or
 validation:
 
-1. Update `README.md`.
+1. Update `README.md` for public behavior and `.github/README.md` for
+   implementation, contract, CI, security, release, or rollback changes.
 2. Update `AGENTS.md` and `CLAUDE.md`.
 3. Update this skill and
    `.claude/skills/maintain-codex-review-action/SKILL.md`.
