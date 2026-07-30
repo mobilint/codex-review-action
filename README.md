@@ -39,6 +39,14 @@ Composite GitHub Action for running Mobilint's self-hosted Codex reviewer on a p
 - `ack_reaction_target`: location of that reaction (`issue`, `issue_comment`, or `review_comment`).
 - `max_files`: soft limit for summary-only review mode (default: `500`).
 - `max_diff_chars`: soft limit for diff truncation (default: `1000000`).
+- `sandbox_mode`: Codex sandbox mode (default: `read-only`).
+- `allow_unsafe_no_sandbox_fallback`: explicit legacy fallback for a separately
+  isolated trusted runner (default: `false`).
+
+Numeric limits and booleans are normalized before use. `max_files` is bounded
+to 5,000 and `max_diff_chars` to 5,000,000; invalid or larger values fall back
+to the central defaults. Invalid sandbox modes fall back to `read-only`, and an
+invalid unsafe-fallback value fails safe to `false`.
 
 ## Flow
 
@@ -65,3 +73,40 @@ Cosmetic suggestions and optional refactors are not reported as findings. During
 - Mention-triggered runs now use the same inline-review submission path as automatic reviews when valid diff positions are available.
 - Mentions inside Markdown blockquotes, fenced code blocks, indented code blocks, or inline code are treated as examples and do not trigger a review.
 - When a mention comes from an existing PR review thread, the action replies in that thread instead of creating a new top-level PR comment.
+
+## Central contract
+
+`config/codex-review-action-contract.json` is the explicit cross-repository
+fixture shared with `mobilint/.github`. Tests require `action.yml` to expose the
+same input names, required flags, and defaults. The central repository
+separately verifies that its reusable workflow passes the full input set.
+Update both fixtures and both test suites whenever the public contract changes.
+
+## Validation
+
+```bash
+python3 -m unittest discover -s tests -v
+python3 -m compileall -q scripts tests
+bash -n scripts/run-review.sh scripts/review-runtime.sh scripts/validate-context.sh
+git diff --check
+```
+
+Ordinary CI uses fixtures and stubs; it does not need a Codex login or mutate a
+live pull request.
+
+## Release channel
+
+The action is currently consumed through `mobilint/codex-review-action@main`.
+No validated `stable` branch exists yet. Keep `@main` for implementation and
+canary validation, then:
+
+1. Validate automatic and mention reviews with the matching reusable workflow.
+2. Create and protect `stable` branches in both central repositories.
+3. Advance this action's `stable` ref first.
+4. Change `codex-pr-review.yml` to use the action's stable ref.
+5. Advance the `.github` stable ref and update the canonical caller.
+6. Distribute that caller change through managed synchronization PRs.
+
+Organization administrators must require CI and review on `stable`, restrict
+direct pushes, and define who may advance it. Those settings are not created by
+this repository.

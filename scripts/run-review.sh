@@ -5,6 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 PROMPTS_DIR="${ROOT_DIR}/prompts"
 source "${SCRIPT_DIR}/validate-context.sh"
+source "${SCRIPT_DIR}/review-runtime.sh"
 
 REPO="${INPUT_REPO}"
 PR_NUMBER="${INPUT_PR_NUMBER}"
@@ -20,6 +21,7 @@ SANDBOX_MODE="${INPUT_SANDBOX_MODE:-read-only}"
 ALLOW_UNSAFE_NO_SANDBOX_FALLBACK="${INPUT_ALLOW_UNSAFE_NO_SANDBOX_FALLBACK:-false}"
 ALLOWED_OWNER="mobilint"
 USE_UNSANDBOXED_FALLBACK="false"
+normalize_review_runtime_inputs
 
 WORKDIR="$(mktemp -d)"
 REPO_DIR="${WORKDIR}/repo"
@@ -51,11 +53,6 @@ require_commands() {
       exit 1
     }
   done
-}
-
-is_codex_sandbox_startup_error() {
-  local log_file="$1"
-  grep -Eiq 'bwrap: loopback: Failed RTM_NEWADDR|could not find bubblewrap' "${log_file}"
 }
 
 check_codex_sandbox_support() {

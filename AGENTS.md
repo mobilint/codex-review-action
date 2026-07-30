@@ -17,6 +17,8 @@ the same change and run the synchronization workflow before finishing.
   execution, and GitHub delivery.
 - `scripts/validate-context.sh`: fail-closed validation for repository, mode,
   event, and GitHub identifiers.
+- `scripts/review-runtime.sh`: bounded numeric, boolean, sandbox, and fallback
+  validation helpers.
 - `scripts/comment-mentions.py`: Markdown-aware actionable mention parser.
 - `scripts/prepare-review-assets.py`: diff truncation and changed-line map.
 - `scripts/render-prompt.py`: strict prompt-template rendering.
@@ -26,6 +28,10 @@ the same change and run the synchronization workflow before finishing.
 - `prompts/mention-review.md.tmpl`: mention response and exhaustive-review
   contract.
 - `tests/`: unit and regression tests.
+- `config/codex-review-action-contract.json`: explicit cross-repository public
+  input fixture.
+- `.github/workflows/check-action.yml`: ordinary unit, contract, syntax, and
+  whitespace CI without live Codex or GitHub writes.
 - `.github/workflows/update-clone-badge.yml`: badge publisher for the orphan
   `badges` branch.
 - `.github/workflows/check-agent-guides.yml`: CI guard that requires the Codex
@@ -55,6 +61,8 @@ guides, and skills together.
 - Keep the final GitHub review payload capped at 25 inline comments.
 - Keep the action's default review capacity synchronized with the centralized
   workflow at 500 changed files and 1,000,000 diff characters.
+- Validate runtime numeric limits, booleans, and sandbox modes before use;
+  invalid or excessive values must fall back to bounded safe defaults.
 - Filter every inline finding to a changed file and valid new-file line.
 - Add 👍 without a comment for an explicitly clean review.
 - Keep response, finding, failure, and error messages visible.
@@ -118,7 +126,7 @@ Run at minimum:
 ```bash
 python3 -m unittest discover -s tests -v
 python3 -m compileall -q scripts tests
-bash -n scripts/run-review.sh scripts/validate-context.sh
+bash -n scripts/run-review.sh scripts/review-runtime.sh scripts/validate-context.sh
 python3 -c "import yaml; yaml.safe_load(open('action.yml', encoding='utf-8')); yaml.safe_load(open('.github/workflows/check-agent-guides.yml', encoding='utf-8')); print('YAML OK')"
 cmp AGENTS.md CLAUDE.md
 cmp .agents/skills/maintain-codex-review-action/SKILL.md .claude/skills/maintain-codex-review-action/SKILL.md
