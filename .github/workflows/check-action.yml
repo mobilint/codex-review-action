@@ -1,0 +1,35 @@
+name: Check Codex review action
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Run unit and contract tests
+        run: python3 -m unittest discover -s tests -v
+
+      - name: Check syntax and whitespace
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m compileall -q scripts tests
+          bash -n \
+            scripts/run-review.sh \
+            scripts/review-runtime.sh \
+            scripts/validate-context.sh
+          git diff --check

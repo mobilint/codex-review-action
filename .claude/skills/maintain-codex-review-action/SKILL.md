@@ -25,6 +25,10 @@ description: Maintain Mobilint's composite Codex PR review action. Use when chan
   `scripts/review-json.py`.
 - Change actionable mention semantics in `scripts/comment-mentions.py`.
 - Change API path validation in `scripts/validate-context.sh`.
+- Change bounded numeric, boolean, sandbox, and fallback normalization in
+  `scripts/review-runtime.sh`.
+- Keep `config/codex-review-action-contract.json` synchronized with the central
+  fixture and reusable workflow.
 - Add focused regression tests for every behavior or security boundary.
 - Guard both the module spec and loader before dynamically importing hyphenated
   scripts in tests.
@@ -33,6 +37,10 @@ description: Maintain Mobilint's composite Codex PR review action. Use when chan
 
 - Use visible `P0`, `P1`, and `P2` finding badges.
 - Keep automatic findings at 8 and final payloads at 25.
+- Keep the action's default review capacity aligned with the centralized
+  workflow at 500 files and 1,000,000 diff characters.
+- Fall back to bounded safe defaults for invalid numeric limits, booleans, or
+  sandbox modes.
 - Let mention mode search exhaustively, then retain at most 25 distinct
   highest-priority findings.
 - Filter inline findings to changed files and valid changed lines.
@@ -52,7 +60,8 @@ description: Maintain Mobilint's composite Codex PR review action. Use when chan
 After changing behavior, structure, interfaces, security boundaries, or
 validation:
 
-1. Update `README.md`.
+1. Update `README.md` for public behavior and `.github/README.md` for
+   implementation, contract, CI, security, release, or rollback changes.
 2. Update `AGENTS.md` and `CLAUDE.md`.
 3. Update this skill and
    `.claude/skills/maintain-codex-review-action/SKILL.md`.
@@ -69,7 +78,7 @@ Run:
 ```bash
 python3 -m unittest discover -s tests -v
 python3 -m compileall -q scripts tests
-bash -n scripts/run-review.sh scripts/validate-context.sh
+bash -n scripts/run-review.sh scripts/review-runtime.sh scripts/validate-context.sh
 python3 -c "import yaml; yaml.safe_load(open('action.yml', encoding='utf-8')); yaml.safe_load(open('.github/workflows/check-agent-guides.yml', encoding='utf-8')); print('YAML OK')"
 cmp AGENTS.md CLAUDE.md
 cmp .agents/skills/maintain-codex-review-action/SKILL.md .claude/skills/maintain-codex-review-action/SKILL.md

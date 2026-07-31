@@ -34,11 +34,11 @@ inputs:
   max_files:
     description: Threshold for summary-only review
     required: false
-    default: "200"
+    default: "500"
   max_diff_chars:
     description: Threshold for diff truncation
     required: false
-    default: "200000"
+    default: "1000000"
   sandbox_mode:
     description: Codex sandbox mode to request
     required: false
