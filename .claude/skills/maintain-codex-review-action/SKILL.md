@@ -54,13 +54,16 @@ description: Maintain Mobilint's composite Codex PR review action. Use when chan
   blob IDs without dereferencing or printing PR-controlled working-tree paths.
 - Set `persist-credentials: false` on read-only checkouts that do not need to
   perform authenticated Git operations.
+- Keep maintainer documentation in `.github/MAINTAINERS.md`; never create
+  `.github/README.md`, which would replace the root landing page and hide its
+  clone badge.
 
 ## Update Documentation
 
 After changing behavior, structure, interfaces, security boundaries, or
 validation:
 
-1. Update `README.md` for public behavior and `.github/README.md` for
+1. Update `README.md` for public behavior and `.github/MAINTAINERS.md` for
    implementation, contract, CI, security, release, or rollback changes.
 2. Update `AGENTS.md` and `CLAUDE.md`.
 3. Update this skill and

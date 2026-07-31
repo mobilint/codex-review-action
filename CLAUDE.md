@@ -37,7 +37,7 @@ the same change and run the synchronization workflow before finishing.
 - `.github/workflows/check-agent-guides.yml`: CI guard that requires the Codex
   and Claude guide and skill copies to remain byte-identical.
 - `README.md`: public action behavior, inputs, and runner requirements.
-- `.github/README.md`: maintainer implementation, contract, CI, security, and
+- `.github/MAINTAINERS.md`: maintainer implementation, contract, CI, security, and
   release guide.
 - `.agents/skills/maintain-codex-review-action/`: Codex maintenance skill.
 - `.claude/skills/maintain-codex-review-action/`: Claude maintenance skill.
@@ -119,10 +119,11 @@ Before finishing any repository change, check whether it changes:
 - the contract with the centralized `.github` workflows.
 
 Keep public behavior and consumption details in `README.md`; keep implementation,
-contract maintenance, CI, and release procedures in `.github/README.md`. Update
+contract maintenance, CI, and release procedures in `.github/MAINTAINERS.md`. Update
 `AGENTS.md`, `CLAUDE.md`, and both skill copies in the same commit. Keep each
 mirrored pair byte-identical. Never update only the Codex or only the Claude
-copy.
+copy. Never create `.github/README.md`: GitHub would select it instead of the
+root landing page and hide the clone badge.
 
 ## Validation
 
