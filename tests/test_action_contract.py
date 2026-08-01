@@ -31,6 +31,14 @@ def parse_action_inputs(text: str) -> dict[str, dict[str, object]]:
 
 
 class ActionContractTests(unittest.TestCase):
+    def test_root_readme_remains_the_landing_page_with_clone_badge(self) -> None:
+        self.assertFalse((ROOT / ".github" / "README.md").exists())
+        self.assertTrue((ROOT / ".github" / "MAINTAINERS.md").is_file())
+        self.assertIn(
+            "[![GitHub clones]",
+            (ROOT / "README.md").read_text(encoding="utf-8"),
+        )
+
     def test_action_manifest_matches_shared_contract(self) -> None:
         contract = json.loads(
             (ROOT / "config" / "codex-review-action-contract.json").read_text(

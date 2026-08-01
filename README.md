@@ -69,4 +69,4 @@ appropriate. Sandbox startup failure aborts the action unless the explicitly
 unsafe fallback is enabled on a separately isolated trusted runner.
 
 For implementation structure, CI, contract maintenance, validation, and release
-procedures, see the [maintainer guide](.github/README.md).
+procedures, see the [maintainer guide](.github/MAINTAINERS.md).
