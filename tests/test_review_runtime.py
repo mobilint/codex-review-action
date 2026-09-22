@@ -112,6 +112,42 @@ printf '%s|%s|%s|%s\n' \
         self.assertEqual(accepted.returncode, 0)
         self.assertNotEqual(rejected.returncode, 0)
 
+    def test_pr_head_commit_must_match_metadata_sha(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            subprocess.run(("git", "init", "-q", str(repo)), check=True)
+            subprocess.run(("git", "-C", str(repo), "config", "user.name", "Test"), check=True)
+            subprocess.run(("git", "-C", str(repo), "config", "user.email", "test@example.com"), check=True)
+            (repo / "file.txt").write_text("base\n", encoding="utf-8")
+            subprocess.run(("git", "-C", str(repo), "add", "file.txt"), check=True)
+            subprocess.run(("git", "-C", str(repo), "commit", "-qm", "head"), check=True)
+            head_sha = subprocess.check_output(
+                ("git", "-C", str(repo), "rev-parse", "HEAD"), text=True
+            ).strip()
+            subprocess.run(("git", "-C", str(repo), "branch", "pr-1"), check=True)
+            (repo / "file.txt").write_text("synthetic merge contents\n", encoding="utf-8")
+            subprocess.run(("git", "-C", str(repo), "commit", "-qam", "synthetic merge"), check=True)
+            subprocess.run(("git", "-C", str(repo), "branch", "merge-ref"), check=True)
+
+            control = subprocess.run(
+                ("bash", "-c", 'source "$1"; verify_pr_head_commit "$2" pr-1 "$3"',
+                 "runtime-test", str(RUNTIME), str(repo), head_sha),
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            mismatch = subprocess.run(
+                ("bash", "-c", 'source "$1"; verify_pr_head_commit "$2" merge-ref "$3"',
+                 "runtime-test", str(RUNTIME), str(repo), head_sha),
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+
+        self.assertEqual(control.returncode, 0)
+        self.assertNotEqual(mismatch.returncode, 0)
+        self.assertIn("does not match", mismatch.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -97,6 +97,8 @@ guides, and skills together.
 - In pull-request checks, never dereference or print repository paths before
   proving they are regular tracked files. Compare trusted Git index metadata or
   blob IDs, and disable checkout credential persistence when it is unnecessary.
+- Fail closed unless the fetched PR head commit equals the metadata head SHA;
+  never use the synthetic merge ref to generate PR-head review coordinates.
 
 ## Implementation Rules
 
