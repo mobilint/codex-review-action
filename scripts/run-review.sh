@@ -10,7 +10,7 @@ source "${SCRIPT_DIR}/review-runtime.sh"
 REPO="${INPUT_REPO}"
 PR_NUMBER="${INPUT_PR_NUMBER}"
 EVENT_NAME="${INPUT_EVENT_NAME}"
-MODE="${INPUT_MODE:-auto}"
+MODE="${INPUT_MODE:-}"
 COMMENT_ID="${INPUT_COMMENT_ID:-}"
 COMMENTER="${INPUT_COMMENTER:-}"
 ACK_REACTION_ID="${INPUT_ACK_REACTION_ID:-}"
@@ -323,13 +323,7 @@ resolve_context() {
     exit 1
   fi
 
-  if [[ -z "${MODE}" ]]; then
-    if [[ "${EVENT_NAME}" == "pull_request" ]]; then
-      MODE="auto"
-    else
-      MODE="mention"
-    fi
-  fi
+  MODE="$(resolve_review_mode "${MODE}" "${EVENT_NAME}")"
 
   if [[ -z "${COMMENT_ID}" && "${MODE}" == "mention" && -n "${GITHUB_EVENT_PATH:-}" && -f "${GITHUB_EVENT_PATH}" ]]; then
     case "${EVENT_NAME}" in

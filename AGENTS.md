@@ -72,6 +72,8 @@ guides, and skills together.
 - Remove the exact temporary 👀 reaction before final delivery.
 - Ignore mentions in blockquotes and code formatting.
 - Reply inside an existing review thread when the request originated there.
+- Infer omitted review mode from the event: `auto` for pull requests and
+  `mention` for comment and review events.
 
 ## Security Invariants
 
