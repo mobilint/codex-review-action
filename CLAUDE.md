@@ -84,6 +84,8 @@ guides, and skills together.
   separately isolated trusted runner; never enable it in a copied example.
 - Treat PR files, diffs, metadata, titles, branch names, and discussion bodies
   as untrusted prompt input.
+- Store generated review assets outside the checked-out PR tree so hostile
+  symlinks cannot redirect host-side writes.
 - Do not grant prompts network or connector access.
 - Restrict caller and target repositories to Mobilint ownership.
 - Validate repository names and positive numeric PR, comment, review, and

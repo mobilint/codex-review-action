@@ -25,7 +25,7 @@ normalize_review_runtime_inputs
 
 WORKDIR="$(mktemp -d)"
 REPO_DIR="${WORKDIR}/repo"
-REVIEW_DIR="${REPO_DIR}/.codex-review"
+REVIEW_DIR="${WORKDIR}/review-assets"
 COMMENT_JSON="${WORKDIR}/comment.json"
 RAW_OUTPUT_FILE="${WORKDIR}/codex_raw_output.txt"
 REPLY_PAYLOAD_FILE="${WORKDIR}/mention-reply-payload.json"
@@ -462,7 +462,8 @@ run_auto_review() {
     --var "EVENT_NAME=${EVENT_NAME}" \
     --var "COMMENTER=${COMMENTER}" \
     --var "CHANGED_FILES=${CHANGED_FILES}" \
-    --var "SUMMARY_ONLY=${SUMMARY_ONLY}"
+    --var "SUMMARY_ONLY=${SUMMARY_ONLY}" \
+    --var "REVIEW_DIR=${REVIEW_DIR}"
 
   run_review_pipeline "${AUTO_PROMPT_FILE}" "${EVENT_NAME}"
   remove_eyes_reaction
@@ -553,6 +554,7 @@ PY
     --var "REQUEST_TEXT=${request_text}" \
     --var "CHANGED_FILES=${CHANGED_FILES}" \
     --var "SUMMARY_ONLY=${SUMMARY_ONLY}" \
+    --var "REVIEW_DIR=${REVIEW_DIR}" \
     --var "COMMENT_BODY=${comment_body}" \
     --var "COMMENT_PATH=${comment_path}" \
     --var "COMMENT_LINE=${comment_line}" \

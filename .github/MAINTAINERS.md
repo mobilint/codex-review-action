@@ -52,6 +52,8 @@ for `pull_request` and `mention` for comment/review events.
 - Preserve Mobilint owner restrictions and validate all identifiers used in
   GitHub API paths.
 - Treat checked-out PR content and rendered prompt data as hostile.
+- Keep generated review assets in the action-owned temporary workspace, outside
+  the checked-out PR tree, so PR-controlled symlinks cannot redirect writes.
 - Keep read-only sandboxing and unsafe fallback disabled in central policy.
 - Never turn an arbitrary Codex failure into an unsandboxed retry.
 - Keep output bounded and restrict inline comments to verified changed lines.

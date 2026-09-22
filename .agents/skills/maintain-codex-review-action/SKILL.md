@@ -49,6 +49,8 @@ description: Maintain Mobilint's composite Codex PR review action. Use when chan
 - Ignore quoted and code-formatted mentions in linear time.
 - Infer omitted mode as `auto` for pull requests and `mention` for comment and
   review events.
+- Store generated review assets outside the checked-out PR tree so hostile
+  symlinks cannot redirect writes.
 - Run in the read-only sandbox by default and keep the unsafe fallback
   disabled in shared or public-repository callers.
 - Validate every identifier before constructing a GitHub API path.
