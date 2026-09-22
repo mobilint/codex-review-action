@@ -49,6 +49,8 @@ The maintained inputs are:
 - Preserve Mobilint owner restrictions and validate all identifiers used in
   GitHub API paths.
 - Treat checked-out PR content and rendered prompt data as hostile.
+- Keep generated review assets in the action-owned temporary workspace, outside
+  the checked-out PR tree, so PR-controlled symlinks cannot redirect writes.
 - Keep read-only sandboxing and unsafe fallback disabled in central policy.
 - Never turn an arbitrary Codex failure into an unsandboxed retry.
 - Require the fetched PR head commit to equal `headRefOid`; never substitute a

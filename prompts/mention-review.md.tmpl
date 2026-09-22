@@ -27,12 +27,12 @@ Review-thread metadata:
 
 You are running in the checked-out PR working tree.
 
-Relevant assets are available in .codex-review/:
-- .codex-review/pr.json: GitHub PR metadata
-- .codex-review/pr.diff: unified diff for this PR update
-- .codex-review/changed-files.txt: changed file paths
-- .codex-review/changed-lines.json: valid new-file line numbers for inline comments
-- .codex-review/comment.json: raw source discussion metadata
+Relevant assets are available in {{REVIEW_DIR}}/:
+- {{REVIEW_DIR}}/pr.json: GitHub PR metadata
+- {{REVIEW_DIR}}/pr.diff: unified diff for this PR update
+- {{REVIEW_DIR}}/changed-files.txt: changed file paths
+- {{REVIEW_DIR}}/changed-lines.json: valid new-file line numbers for inline comments
+- {{REVIEW_DIR}}/comment.json: raw source discussion metadata
 
 Your task:
 1. Understand what the requester is asking for from the original source body and parsed request.
@@ -42,7 +42,7 @@ Your task:
 5. If the request is about a review thread, focus on that file and hunk first, then continue reviewing the remaining requested scope until a complete pass yields no new finding.
 6. If you need to make an inference, say that it is an inference.
 7. Do not claim to have changed code or run commands.
-8. Do not use MCP connectors, web tools, or network access. Use only the checked-out repository and .codex-review assets.
+8. Do not use MCP connectors, web tools, or network access. Use only the checked-out repository and {{REVIEW_DIR}} assets.
 
 IMPORTANT OUTPUT REQUIREMENTS:
 - Output MUST be valid JSON only.
@@ -83,6 +83,6 @@ Rules for findings:
 - Do not report cosmetic suggestions or optional refactors as findings.
 - Use side "RIGHT".
 - The "line" must be the line number in the new file version.
-- Only use file paths listed in .codex-review/changed-files.txt.
-- Only use line numbers present for that file in .codex-review/changed-lines.json.
+- Only use file paths listed in {{REVIEW_DIR}}/changed-files.txt.
+- Only use line numbers present for that file in {{REVIEW_DIR}}/changed-lines.json.
 - If the request does not justify inline findings, you may return an empty findings list and focus on verdict plus suggested_next_steps.

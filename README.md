@@ -51,7 +51,8 @@ back to `read-only`, and invalid fallback values fail safe to `false`.
 1. Fetch PR metadata and check out the matching PR head on the self-hosted
    runner. A missing head ref or commit mismatch fails closed; the synthetic
    merge ref is never substituted because its review coordinates can differ.
-2. Build bounded `.codex-review` assets from the current diff.
+2. Build bounded review assets outside the hostile PR checkout from the current
+   diff.
 3. Render the appropriate prompt and run Codex.
 4. Normalize the returned JSON and validate findings against changed lines.
 5. Remove 👀, then add 👍 for a clean result or publish a bounded review.
