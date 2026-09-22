@@ -44,6 +44,9 @@ The maintained inputs are:
 - `sandbox_mode`
 - `allow_unsafe_no_sandbox_fallback`
 
+The optional `mode` input has no manifest default: the runtime infers `auto`
+for `pull_request` and `mention` for comment/review events.
+
 ## Security and compatibility rules
 
 - Preserve Mobilint owner restrictions and validate all identifiers used in

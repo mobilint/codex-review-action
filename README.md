@@ -31,7 +31,8 @@ pull request.
 - `pr_number`: positive numeric pull-request number.
 - `event_name`: `pull_request`, `issue_comment`,
   `pull_request_review_comment`, or `pull_request_review`.
-- `mode`: `auto` or `mention`.
+- `mode`: `auto` or `mention`. When omitted, `pull_request` events use `auto`
+  and comment/review events use `mention`.
 - `comment_id`: positive numeric source discussion ID for mention runs.
 - `commenter`: source commenter login for mention runs.
 - `ack_reaction_id`: positive numeric ID of the temporary 👀 reaction.
