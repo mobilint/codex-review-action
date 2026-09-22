@@ -51,6 +51,8 @@ The maintained inputs are:
 - Treat checked-out PR content and rendered prompt data as hostile.
 - Keep read-only sandboxing and unsafe fallback disabled in central policy.
 - Never turn an arbitrary Codex failure into an unsandboxed retry.
+- Require the fetched PR head commit to equal `headRefOid`; never substitute a
+  synthetic merge ref when producing inline-review coordinates.
 - Keep output bounded and restrict inline comments to verified changed lines.
 - Preserve 👀 acknowledgement removal, 👍 clean delivery, visible errors, and
   P0/P1/P2 badges.

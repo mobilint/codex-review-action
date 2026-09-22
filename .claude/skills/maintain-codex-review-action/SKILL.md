@@ -54,6 +54,8 @@ description: Maintain Mobilint's composite Codex PR review action. Use when chan
   blob IDs without dereferencing or printing PR-controlled working-tree paths.
 - Set `persist-credentials: false` on read-only checkouts that do not need to
   perform authenticated Git operations.
+- Fail closed unless the fetched PR head commit equals the metadata head SHA;
+  never substitute the synthetic merge ref for review-coordinate generation.
 - Keep maintainer documentation in `.github/MAINTAINERS.md`; never create
   `.github/README.md`, which would replace the root landing page and hide its
   clone badge.
