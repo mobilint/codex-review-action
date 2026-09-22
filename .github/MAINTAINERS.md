@@ -66,7 +66,7 @@ for `pull_request` and `mention` for comment/review events.
 ## CI and validation
 
 `.github/workflows/check-action.yml` runs the offline unit suite, Python
-compilation, shell syntax checks, mirror checks, and whitespace validation.
+compilation, shell syntax checks, canonical-source and symlink checks, and whitespace validation.
 `.github/workflows/check-agent-guides.yml` keeps Codex and Claude guides
 byte-identical without dereferencing PR-controlled paths.
 
@@ -98,3 +98,14 @@ canary validation, then:
 Organization administrators must require CI and review on `stable`, restrict
 direct pushes, and define who may advance it. Repository code cannot create
 those settings.
+
+## Shared Codex and Claude guidance
+
+Edit `AGENTS.md` and `.agents/skills` as the canonical sources. `CLAUDE.md`
+links to `AGENTS.md`; `.claude/skills` links to `../.agents/skills`. Changes through
+either path affect the same files. Check out with Git symlink support enabled
+(`core.symlinks=true`) so these entries materialize as links rather than text.
+The guide CI checks canonical files as tracked `100644` blobs and accepts only
+those two exact `120000` link targets by Git blob identity. It never dereferences
+PR-controlled links. Other source-file and managed-caller checks still reject
+symlinks. The regression tests cover valid links and hostile alternatives.

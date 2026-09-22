@@ -74,3 +74,6 @@ unsafe fallback is enabled on a separately isolated trusted runner.
 
 For implementation structure, CI, contract maintenance, validation, and release
 procedures, see the [maintainer guide](.github/MAINTAINERS.md).
+
+Codex and Claude share repository guidance through symlinks: edit `AGENTS.md`
+and `.agents/skills`; `CLAUDE.md` and `.claude/skills` use those same files.
