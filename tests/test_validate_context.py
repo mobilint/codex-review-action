@@ -9,6 +9,37 @@ SCRIPT = Path(__file__).parents[1] / "scripts" / "validate-context.sh"
 
 
 class ValidateContextTests(unittest.TestCase):
+    def resolve_mode(self, mode: str, event_name: str) -> str:
+        result = subprocess.run(
+            [
+                "bash",
+                "-c",
+                'source "$1"; resolve_review_mode "$2" "$3"',
+                "bash",
+                str(SCRIPT),
+                mode,
+                event_name,
+            ],
+            capture_output=True,
+            check=True,
+            text=True,
+        )
+        return result.stdout.strip()
+
+    def test_resolves_omitted_mode_from_event(self) -> None:
+        self.assertEqual(self.resolve_mode("", "pull_request"), "auto")
+        for event_name in (
+            "issue_comment",
+            "pull_request_review_comment",
+            "pull_request_review",
+        ):
+            with self.subTest(event_name=event_name):
+                self.assertEqual(self.resolve_mode("", event_name), "mention")
+
+    def test_preserves_explicit_mode(self) -> None:
+        self.assertEqual(self.resolve_mode("mention", "pull_request"), "mention")
+        self.assertEqual(self.resolve_mode("auto", "issue_comment"), "auto")
+
     def validate(
         self,
         *,

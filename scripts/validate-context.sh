@@ -4,6 +4,19 @@ is_positive_integer() {
   [[ "$1" =~ ^[1-9][0-9]*$ ]]
 }
 
+resolve_review_mode() {
+  local mode="$1"
+  local event_name="$2"
+
+  if [[ -n "${mode}" ]]; then
+    printf '%s\n' "${mode}"
+  elif [[ "${event_name}" == "pull_request" ]]; then
+    printf 'auto\n'
+  else
+    printf 'mention\n'
+  fi
+}
+
 validate_review_context() {
   local repo="$1"
   local pr_number="$2"

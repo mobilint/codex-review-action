@@ -47,6 +47,8 @@ description: Maintain Mobilint's composite Codex PR review action. Use when chan
 - Use reaction-only 👍 for clean reviews and keep errors visible.
 - Remove the exact temporary 👀 reaction before final output.
 - Ignore quoted and code-formatted mentions in linear time.
+- Infer omitted mode as `auto` for pull requests and `mention` for comment and
+  review events.
 - Store generated review assets outside the checked-out PR tree so hostile
   symlinks cannot redirect writes.
 - Run in the read-only sandbox by default and keep the unsafe fallback
