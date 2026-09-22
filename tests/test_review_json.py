@@ -183,6 +183,13 @@ class ReviewJsonTests(unittest.TestCase):
             "comment",
         )
 
+    def test_auto_review_without_explicit_outcome_keeps_a_visible_response(self) -> None:
+        self.assertEqual(review_json.delivery_action({}, "auto"), "comment")
+        self.assertEqual(
+            review_json.delivery_action({"findings": []}, "auto"),
+            "comment",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
