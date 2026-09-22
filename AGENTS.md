@@ -6,9 +6,10 @@ Maintain the composite GitHub Action that runs Mobilint's self-hosted Codex PR
 reviewer, validates structured findings, and publishes GitHub reactions,
 reviews, thread replies, and failure notices.
 
-`AGENTS.md` and `CLAUDE.md` are byte-for-byte mirrors. The repository skill is
-also mirrored under `.agents/skills` and `.claude/skills`. Update both copies in
-the same change and run the synchronization workflow before finishing.
+`AGENTS.md` and `.agents/skills` are the canonical sources. `CLAUDE.md` is a
+relative symlink to `AGENTS.md`, and `.claude/skills` is a relative symlink to
+`../.agents/skills`. Edit the canonical files once; both tools read the same
+content. Preserve these exact links and run the guide validation before finishing.
 
 ## Repository Map
 
@@ -35,7 +36,7 @@ the same change and run the synchronization workflow before finishing.
 - `.github/workflows/update-clone-badge.yml`: badge publisher for the orphan
   `badges` branch.
 - `.github/workflows/check-agent-guides.yml`: CI guard that requires the Codex
-  and Claude guide and skill copies to remain byte-identical.
+  and Claude guide and skill paths to share verified canonical sources.
 - `README.md`: public action behavior, inputs, and runner requirements.
 - `.github/MAINTAINERS.md`: maintainer implementation, contract, CI, security, and
   release guide.
@@ -95,7 +96,8 @@ guides, and skills together.
 - Keep payload size and finding count bounded.
 - Do not place authentication headers in the checked-out repository config.
 - In pull-request checks, never dereference or print repository paths before
-  proving they are regular tracked files. Compare trusted Git index metadata or
+  proving canonical sources are regular tracked files and the two allowed
+  Claude links have their exact fixed targets. Compare trusted Git index metadata or
   blob IDs, and disable checkout credential persistence when it is unnecessary.
 - Fail closed unless the fetched PR head commit equals the metadata head SHA;
   never use the synthetic merge ref to generate PR-head review coordinates.
@@ -125,10 +127,10 @@ Before finishing any repository change, check whether it changes:
 - the contract with the centralized `.github` workflows.
 
 Keep public behavior and consumption details in `README.md`; keep implementation,
-contract maintenance, CI, and release procedures in `.github/MAINTAINERS.md`. Update
-`AGENTS.md`, `CLAUDE.md`, and both skill copies in the same commit. Keep each
-mirrored pair byte-identical. Never update only the Codex or only the Claude
-copy. Never create `.github/README.md`: GitHub would select it instead of the
+contract maintenance, CI, and release procedures in `.github/MAINTAINERS.md`. Update canonical `AGENTS.md` and the
+maintenance skill in the same commit. Preserve the Claude symlinks so both tools
+receive those changes. Never create `.github/README.md`: GitHub would select it
+instead of the
 root landing page and hide the clone badge.
 
 ## Validation
