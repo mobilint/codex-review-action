@@ -49,7 +49,8 @@ back to `read-only`, and invalid fallback values fail safe to `false`.
 ## Review behavior
 
 1. Fetch PR metadata and check out the PR head on the self-hosted runner.
-2. Build bounded `.codex-review` assets from the current diff.
+2. Build bounded review assets outside the hostile PR checkout from the current
+   diff.
 3. Render the appropriate prompt and run Codex.
 4. Normalize the returned JSON and validate findings against changed lines.
 5. Remove 👀, then add 👍 for a clean result or publish a bounded review.
