@@ -31,7 +31,8 @@ pull request.
 - `pr_number`: positive numeric pull-request number.
 - `event_name`: `pull_request`, `issue_comment`,
   `pull_request_review_comment`, or `pull_request_review`.
-- `mode`: `auto` or `mention`.
+- `mode`: `auto` or `mention`. When omitted, `pull_request` events use `auto`
+  and comment/review events use `mention`.
 - `comment_id`: positive numeric source discussion ID for mention runs.
 - `commenter`: source commenter login for mention runs.
 - `ack_reaction_id`: positive numeric ID of the temporary 👀 reaction.
@@ -48,8 +49,11 @@ back to `read-only`, and invalid fallback values fail safe to `false`.
 
 ## Review behavior
 
-1. Fetch PR metadata and check out the PR head on the self-hosted runner.
-2. Build bounded `.codex-review` assets from the current diff.
+1. Fetch PR metadata and check out the matching PR head on the self-hosted
+   runner. A missing head ref or commit mismatch fails closed; the synthetic
+   merge ref is never substituted because its review coordinates can differ.
+2. Build bounded review assets outside the hostile PR checkout from the current
+   diff.
 3. Render the appropriate prompt and run Codex.
 4. Normalize the returned JSON and validate findings against changed lines.
 5. Remove 👀, then add 👍 for a clean result or publish a bounded review.
@@ -70,3 +74,6 @@ unsafe fallback is enabled on a separately isolated trusted runner.
 
 For implementation structure, CI, contract maintenance, validation, and release
 procedures, see the [maintainer guide](.github/MAINTAINERS.md).
+
+Codex and Claude share repository guidance through symlinks: edit `AGENTS.md`
+and `.agents/skills`; `CLAUDE.md` and `.claude/skills` use those same files.

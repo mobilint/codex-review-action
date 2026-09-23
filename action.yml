@@ -12,9 +12,8 @@ inputs:
     description: pull_request, issue_comment, pull_request_review_comment, or pull_request_review
     required: true
   mode:
-    description: auto for fallback review, mention for @mobilint-review comment handling
+    description: auto for fallback review, mention for @mobilint-review comment handling; inferred from event_name when omitted
     required: false
-    default: "auto"
   comment_id:
     description: Source discussion item id for mention-triggered runs
     required: false

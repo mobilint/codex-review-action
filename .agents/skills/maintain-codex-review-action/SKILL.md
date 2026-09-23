@@ -47,13 +47,20 @@ description: Maintain Mobilint's composite Codex PR review action. Use when chan
 - Use reaction-only 👍 for clean reviews and keep errors visible.
 - Remove the exact temporary 👀 reaction before final output.
 - Ignore quoted and code-formatted mentions in linear time.
+- Infer omitted mode as `auto` for pull requests and `mention` for comment and
+  review events.
+- Store generated review assets outside the checked-out PR tree so hostile
+  symlinks cannot redirect writes.
 - Run in the read-only sandbox by default and keep the unsafe fallback
   disabled in shared or public-repository callers.
 - Validate every identifier before constructing a GitHub API path.
-- For pull-request checks, reject non-`100644` index entries and compare Git
-  blob IDs without dereferencing or printing PR-controlled working-tree paths.
+- For pull-request checks, require `100644` canonical sources and allow only
+  the exact `120000` Claude links to `AGENTS.md` and `../.agents/skills`. Compare
+  index modes and blob IDs without following or printing PR-controlled paths.
 - Set `persist-credentials: false` on read-only checkouts that do not need to
   perform authenticated Git operations.
+- Fail closed unless the fetched PR head commit equals the metadata head SHA;
+  never substitute the synthetic merge ref for review-coordinate generation.
 - Keep maintainer documentation in `.github/MAINTAINERS.md`; never create
   `.github/README.md`, which would replace the root landing page and hide its
   clone badge.
@@ -65,14 +72,12 @@ validation:
 
 1. Update `README.md` for public behavior and `.github/MAINTAINERS.md` for
    implementation, contract, CI, security, release, or rollback changes.
-2. Update `AGENTS.md` and `CLAUDE.md`.
-3. Update this skill and
-   `.claude/skills/maintain-codex-review-action/SKILL.md`.
-4. Keep each mirrored pair byte-identical.
-5. Update both `agents/openai.yaml` copies if the skill purpose changes.
-6. Update the centralized workflow guides and skill if their contract changed.
-
-Never update only the Codex or only the Claude documentation.
+2. Update canonical `AGENTS.md` and this skill; Claude reads the same files
+   through `CLAUDE.md -> AGENTS.md` and `.claude/skills -> ../.agents/skills`.
+3. Update canonical `agents/openai.yaml` if the skill purpose or default prompt
+   changes.
+4. Preserve those exact relative symlinks instead of recreating copied files.
+5. Update the companion repository's canonical guidance if its contract changes.
 
 ## Validate
 

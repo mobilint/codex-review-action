@@ -44,13 +44,20 @@ The maintained inputs are:
 - `sandbox_mode`
 - `allow_unsafe_no_sandbox_fallback`
 
+The optional `mode` input has no manifest default: the runtime infers `auto`
+for `pull_request` and `mention` for comment/review events.
+
 ## Security and compatibility rules
 
 - Preserve Mobilint owner restrictions and validate all identifiers used in
   GitHub API paths.
 - Treat checked-out PR content and rendered prompt data as hostile.
+- Keep generated review assets in the action-owned temporary workspace, outside
+  the checked-out PR tree, so PR-controlled symlinks cannot redirect writes.
 - Keep read-only sandboxing and unsafe fallback disabled in central policy.
 - Never turn an arbitrary Codex failure into an unsandboxed retry.
+- Require the fetched PR head commit to equal `headRefOid`; never substitute a
+  synthetic merge ref when producing inline-review coordinates.
 - Keep output bounded and restrict inline comments to verified changed lines.
 - Preserve 👀 acknowledgement removal, 👍 clean delivery, visible errors, and
   P0/P1/P2 badges.
@@ -59,7 +66,7 @@ The maintained inputs are:
 ## CI and validation
 
 `.github/workflows/check-action.yml` runs the offline unit suite, Python
-compilation, shell syntax checks, mirror checks, and whitespace validation.
+compilation, shell syntax checks, canonical-source and symlink checks, and whitespace validation.
 `.github/workflows/check-agent-guides.yml` keeps Codex and Claude guides
 byte-identical without dereferencing PR-controlled paths.
 
@@ -91,3 +98,14 @@ canary validation, then:
 Organization administrators must require CI and review on `stable`, restrict
 direct pushes, and define who may advance it. Repository code cannot create
 those settings.
+
+## Shared Codex and Claude guidance
+
+Edit `AGENTS.md` and `.agents/skills` as the canonical sources. `CLAUDE.md`
+links to `AGENTS.md`; `.claude/skills` links to `../.agents/skills`. Changes through
+either path affect the same files. Check out with Git symlink support enabled
+(`core.symlinks=true`) so these entries materialize as links rather than text.
+The guide CI checks canonical files as tracked `100644` blobs and accepts only
+those two exact `120000` link targets by Git blob identity. It never dereferences
+PR-controlled links. Other source-file and managed-caller checks still reject
+symlinks. The regression tests cover valid links and hostile alternatives.

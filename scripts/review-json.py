@@ -34,12 +34,8 @@ def delivery_action(review: dict, mode: str) -> str:
         return "comment"
 
     outcome = str(review.get("outcome", "")).strip().lower()
-    if mode == "auto":
-        # Empty output from the older auto-review prompt meant a clean review.
-        return "reaction" if outcome in {"", "clean"} else "comment"
-
-    # Older mention prompts may contain an actual answer with no findings, so
-    # only the new prompt's explicit clean outcome can suppress that response.
+    # Only the prompt's explicit clean outcome can suppress a visible response.
+    # Schema-incomplete model output must fail closed instead of looking clean.
     return "reaction" if outcome == "clean" else "comment"
 
 

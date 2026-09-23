@@ -74,3 +74,19 @@ is_codex_sandbox_startup_error() {
   local log_file="$1"
   grep -Eiq 'bwrap: loopback: Failed RTM_NEWADDR|could not find bubblewrap' "${log_file}"
 }
+
+verify_pr_head_commit() {
+  local repo_dir="$1"
+  local ref="$2"
+  local expected_sha="$3"
+  local actual_sha
+
+  actual_sha="$(git -C "${repo_dir}" rev-parse --verify "${ref}^{commit}" 2>/dev/null)" || {
+    echo "[ERROR] fetched PR head ref is not a commit" >&2
+    return 1
+  }
+  if [[ "${actual_sha}" != "${expected_sha}" ]]; then
+    echo "[ERROR] fetched PR head does not match the metadata head SHA" >&2
+    return 1
+  fi
+}

@@ -10,7 +10,7 @@ source "${SCRIPT_DIR}/review-runtime.sh"
 REPO="${INPUT_REPO}"
 PR_NUMBER="${INPUT_PR_NUMBER}"
 EVENT_NAME="${INPUT_EVENT_NAME}"
-MODE="${INPUT_MODE:-auto}"
+MODE="${INPUT_MODE:-}"
 COMMENT_ID="${INPUT_COMMENT_ID:-}"
 COMMENTER="${INPUT_COMMENTER:-}"
 ACK_REACTION_ID="${INPUT_ACK_REACTION_ID:-}"
@@ -25,7 +25,7 @@ normalize_review_runtime_inputs
 
 WORKDIR="$(mktemp -d)"
 REPO_DIR="${WORKDIR}/repo"
-REVIEW_DIR="${REPO_DIR}/.codex-review"
+REVIEW_DIR="${WORKDIR}/review-assets"
 COMMENT_JSON="${WORKDIR}/comment.json"
 RAW_OUTPUT_FILE="${WORKDIR}/codex_raw_output.txt"
 REPLY_PAYLOAD_FILE="${WORKDIR}/mention-reply-payload.json"
@@ -323,13 +323,7 @@ resolve_context() {
     exit 1
   fi
 
-  if [[ -z "${MODE}" ]]; then
-    if [[ "${EVENT_NAME}" == "pull_request" ]]; then
-      MODE="auto"
-    else
-      MODE="mention"
-    fi
-  fi
+  MODE="$(resolve_review_mode "${MODE}" "${EVENT_NAME}")"
 
   if [[ -z "${COMMENT_ID}" && "${MODE}" == "mention" && -n "${GITHUB_EVENT_PATH:-}" && -f "${GITHUB_EVENT_PATH}" ]]; then
     case "${EVENT_NAME}" in
@@ -387,10 +381,11 @@ fetch_pr_and_checkout() {
   }
 
   echo "[INFO] fetching PR head"
-  if ! git -C "${REPO_DIR}" -c "http.extraheader=${GH_AUTH_HEADER}" fetch --depth=50 "https://github.com/${REPO}.git" "pull/${PR_NUMBER}/head:pr-${PR_NUMBER}"; then
-    echo "[WARN] failed to fetch refs/pull/${PR_NUMBER}/head; falling back to refs/pull/${PR_NUMBER}/merge" >&2
-    git -C "${REPO_DIR}" -c "http.extraheader=${GH_AUTH_HEADER}" fetch --depth=50 "https://github.com/${REPO}.git" "pull/${PR_NUMBER}/merge:pr-${PR_NUMBER}"
-  fi
+  git -C "${REPO_DIR}" -c "http.extraheader=${GH_AUTH_HEADER}" fetch --depth=50 "https://github.com/${REPO}.git" "pull/${PR_NUMBER}/head:pr-${PR_NUMBER}" || {
+    echo "[ERROR] failed to fetch refs/pull/${PR_NUMBER}/head" >&2
+    exit 1
+  }
+  verify_pr_head_commit "${REPO_DIR}" "pr-${PR_NUMBER}" "${HEAD_SHA}" || exit 1
   git -C "${REPO_DIR}" checkout "pr-${PR_NUMBER}" >/dev/null 2>&1 || {
     echo "[ERROR] failed to checkout PR head branch pr-${PR_NUMBER}" >&2
     exit 1
@@ -404,10 +399,11 @@ fetch_pr_and_checkout() {
       exit 1
     }
     git -C "${REPO_DIR}" -c "http.extraheader=${GH_AUTH_HEADER}" fetch --unshallow "https://github.com/${REPO}.git" "${BASE_REF}" || git -C "${REPO_DIR}" -c "http.extraheader=${GH_AUTH_HEADER}" fetch "https://github.com/${REPO}.git" "${BASE_REF}"
-    if ! git -C "${REPO_DIR}" -c "http.extraheader=${GH_AUTH_HEADER}" fetch "https://github.com/${REPO}.git" "pull/${PR_NUMBER}/head:pr-${PR_NUMBER}"; then
-      echo "[WARN] failed to fetch refs/pull/${PR_NUMBER}/head during full-history retry; falling back to refs/pull/${PR_NUMBER}/merge" >&2
-      git -C "${REPO_DIR}" -c "http.extraheader=${GH_AUTH_HEADER}" fetch "https://github.com/${REPO}.git" "pull/${PR_NUMBER}/merge:pr-${PR_NUMBER}"
-    fi
+    git -C "${REPO_DIR}" -c "http.extraheader=${GH_AUTH_HEADER}" fetch "https://github.com/${REPO}.git" "pull/${PR_NUMBER}/head:pr-${PR_NUMBER}" || {
+      echo "[ERROR] failed to fetch refs/pull/${PR_NUMBER}/head during full-history retry" >&2
+      exit 1
+    }
+    verify_pr_head_commit "${REPO_DIR}" "pr-${PR_NUMBER}" "${HEAD_SHA}" || exit 1
     git -C "${REPO_DIR}" checkout "pr-${PR_NUMBER}" >/dev/null 2>&1 || {
       echo "[ERROR] failed to checkout PR branch pr-${PR_NUMBER} after full-history retry" >&2
       exit 1
@@ -468,7 +464,8 @@ run_auto_review() {
     --var "EVENT_NAME=${EVENT_NAME}" \
     --var "COMMENTER=${COMMENTER}" \
     --var "CHANGED_FILES=${CHANGED_FILES}" \
-    --var "SUMMARY_ONLY=${SUMMARY_ONLY}"
+    --var "SUMMARY_ONLY=${SUMMARY_ONLY}" \
+    --var "REVIEW_DIR=${REVIEW_DIR}"
 
   run_review_pipeline "${AUTO_PROMPT_FILE}" "${EVENT_NAME}"
   remove_eyes_reaction
@@ -559,6 +556,7 @@ PY
     --var "REQUEST_TEXT=${request_text}" \
     --var "CHANGED_FILES=${CHANGED_FILES}" \
     --var "SUMMARY_ONLY=${SUMMARY_ONLY}" \
+    --var "REVIEW_DIR=${REVIEW_DIR}" \
     --var "COMMENT_BODY=${comment_body}" \
     --var "COMMENT_PATH=${comment_path}" \
     --var "COMMENT_LINE=${comment_line}" \
