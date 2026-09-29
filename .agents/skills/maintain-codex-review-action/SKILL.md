@@ -110,3 +110,8 @@ failure from a job waiting on the gate or a per-PR concurrency group.
 Keep `.github/workflows/code-review.yml` identical to the central canonical
 caller; self-review uses the deployed pinned action, never PR action code.
 Comment-triggered reviews require this caller on the default branch.
+
+Pin managed reusable-workflow calls to a reviewed full commit SHA from
+`mobilint/.github`, verifying that the workflow exists at that revision. Keep
+the central template, generated example, and consumer callers synchronized.
+Check SHA provenance through GitHub; a 40-hex syntax test alone cannot prove it.

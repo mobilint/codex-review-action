@@ -171,3 +171,8 @@ service needs a distinct installation/work directory, the required tools and
 Codex authentication, and working read-only sandbox support. Keep review assets
 unique per invocation and outside the PR checkout. Per-PR concurrency and gate
 waiting are separate from runner capacity and must not be bypassed for pooling.
+
+Pin managed reusable-workflow calls to a reviewed full commit SHA from
+`mobilint/.github`, verifying that the workflow exists at that revision. Keep
+the central template, generated example, and consumer callers synchronized.
+Check SHA provenance through GitHub; a 40-hex syntax test alone cannot prove it.
