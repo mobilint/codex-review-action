@@ -119,7 +119,11 @@ Each service user needs the tools listed in the action README, Codex credentials
 and a working read-only sandbox. Shared-host runners share machine capacity;
 adding services does not add CPU or memory. The action uses a unique directory
 under `RUNNER_TEMP`, falling back to `TMPDIR` or `/tmp` outside Actions, and cleans
-up only its own directory. No custom dispatcher or runner-name binding is needed.
+up only its own directory. This describes the candidate action in this PR; the
+central deployed pin remains `2454440`, which uses `mktemp -d` under `TMPDIR`
+or `/tmp`. Deploying the candidate requires approval, a direct-action canary,
+and a separate reviewed central pin update. No custom dispatcher or runner-name
+binding is needed.
 
 An organization administrator should verify both registrations are online with
 the matching label, and that group `codex` permits each consuming repository
@@ -146,3 +150,13 @@ not the running job, even with `cancel-in-progress: false`. See the official
 These are intentional review policies, not runner affinity. An already-running review is not migrated. A queued
 eligible job with an idle matching runner warrants checking its labels, group
 access, online status and runner service logs before changing concurrency policy.
+
+## Reviewing this repository
+
+`.github/workflows/code-review.yml` is an exact copy of the central managed
+caller. It delegates automatic and `@mobilint-review` reviews to the reusable
+workflow and its deployed immutable action, not the action code under review.
+Comment events use the default-branch caller, so after the initial enrollment
+PR merges, post a fresh mention on existing PRs. The initial caller PR can be
+reviewed via its `pull_request.opened` event, including self-hosted fallback
+when the official reviewer has reached its usage limit.

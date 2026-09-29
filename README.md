@@ -85,3 +85,7 @@ GitHub assigns eligible queued jobs to any idle matching runner. Two registered,
 online runners can execute two reviews at once; additional eligible jobs wait
 for capacity. This does not bypass the trust gate or per-PR concurrency policy.
 See the maintainer guide for setup and the manual pool check.
+
+This repository uses the central managed review caller. After that caller is on
+`main`, trusted contributors can request a self-hosted review with
+`@mobilint-review` on a pull request; review execution uses the deployed action.
