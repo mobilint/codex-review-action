@@ -158,3 +158,12 @@ boundary when fixing a security issue.
 - Do not weaken sandboxing, trust, input validation, or visible failure
   handling to make a test pass.
 - Push badge artifacts only to `badges`; push source changes only to `main`.
+
+## Reviewer runner pool
+
+Use group `codex` and label `codex-reviewer` to select any idle matching runner.
+Do not bind reviews to a runner name or add a host-wide review lock. Each runner
+service needs a distinct installation/work directory, the required tools and
+Codex authentication, and working read-only sandbox support. Keep review assets
+unique per invocation and outside the PR checkout. Per-PR concurrency and gate
+waiting are separate from runner capacity and must not be bypassed for pooling.

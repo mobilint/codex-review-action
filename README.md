@@ -77,3 +77,11 @@ procedures, see the [maintainer guide](.github/MAINTAINERS.md).
 
 Codex and Claude share repository guidance through symlinks: edit `AGENTS.md`
 and `.agents/skills`; `CLAUDE.md` and `.claude/skills` use those same files.
+
+## Multiple review runners
+
+The central workflow targets runner group `codex` and label `codex-reviewer`.
+GitHub assigns eligible queued jobs to any idle matching runner. Two registered,
+online runners can execute two reviews at once; additional eligible jobs wait
+for capacity. This does not bypass the trust gate or per-PR concurrency policy.
+See the maintainer guide for setup and the manual pool check.
