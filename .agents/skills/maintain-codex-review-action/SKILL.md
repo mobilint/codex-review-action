@@ -97,3 +97,7 @@ git diff --check
 For a security fix, also run the original malicious input and a legitimate
 control through the real boundary. Review the final diff for alternate sinks,
 fallback branches, unbounded output, and cross-repository contract drift.
+
+Keep `.github/workflows/code-review.yml` identical to the central canonical
+caller; self-review uses the deployed pinned action, never PR action code.
+Comment-triggered reviews require this caller on the default branch.
