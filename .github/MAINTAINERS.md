@@ -84,8 +84,10 @@ tests validate bounded fallbacks without actually executing an unsafe command.
 
 ## Release channel
 
-The action is currently consumed through `mobilint/codex-review-action@main`.
-No validated `stable` branch exists yet. Keep `@main` for implementation and
+The central reusable workflow currently consumes the action from its reviewed
+commit SHA. The managed callers likewise pin the central workflow to a reviewed
+full commit SHA; never distribute a caller that uses a branch or tag. No
+validated `stable` branch exists yet. Use `main` only for implementation and
 canary validation, then:
 
 1. Validate automatic and mention reviews with the matching reusable workflow.
@@ -154,8 +156,10 @@ access, online status and runner service logs before changing concurrency policy
 ## Reviewing this repository
 
 `.github/workflows/code-review.yml` is an exact copy of the central managed
-caller. It delegates automatic and `@mobilint-review` reviews to the reusable
-workflow and its deployed immutable action, not the action code under review.
+caller. It delegates automatic and `@mobilint-review` reviews to a reviewed,
+SHA-pinned reusable workflow and its SHA-pinned deployed action, not the action
+code under review. When central workflow behavior changes, review that change,
+then synchronize every managed caller to the resulting full commit SHA.
 Comment events use the default-branch caller, so after the initial enrollment
 PR merges, post a fresh mention on existing PRs. The initial caller PR can be
 reviewed via its `pull_request.opened` event, including self-hosted fallback

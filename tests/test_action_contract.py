@@ -31,6 +31,19 @@ def parse_action_inputs(text: str) -> dict[str, dict[str, object]]:
 
 
 class ActionContractTests(unittest.TestCase):
+    def test_managed_caller_pins_reusable_workflow_to_commit(self) -> None:
+        text = (ROOT / ".github/workflows/code-review.yml").read_text(
+            encoding="utf-8"
+        )
+        match = re.search(
+            r"^\s*uses: mobilint/\.github/\.github/workflows/"
+            r"codex-pr-review\.yml@([^\s#]+)$",
+            text,
+            re.M,
+        )
+        self.assertIsNotNone(match)
+        self.assertRegex(match.group(1), r"\A[0-9a-f]{40}\Z")
+
     def test_root_readme_remains_the_landing_page_with_clone_badge(self) -> None:
         self.assertFalse((ROOT / ".github" / "README.md").exists())
         self.assertTrue((ROOT / ".github" / "MAINTAINERS.md").is_file())

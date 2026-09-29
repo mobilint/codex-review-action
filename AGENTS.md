@@ -90,6 +90,8 @@ guides, and skills together.
 - Store generated review assets outside the checked-out PR tree so hostile
   symlinks cannot redirect host-side writes.
 - Do not grant prompts network or connector access.
+- Pin external reusable workflows and their downstream actions to reviewed full
+  commit SHAs; never delegate self-hosted execution through a branch or tag.
 - Restrict caller and target repositories to Mobilint ownership.
 - Validate repository names and positive numeric PR, comment, review, and
   reaction identifiers before API path construction.

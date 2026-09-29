@@ -54,6 +54,8 @@ description: Maintain Mobilint's composite Codex PR review action. Use when chan
 - Run in the read-only sandbox by default and keep the unsafe fallback
   disabled in shared or public-repository callers.
 - Validate every identifier before constructing a GitHub API path.
+- Pin external reusable workflows and their downstream actions to reviewed full
+  commit SHAs, never mutable branches or tags.
 - For pull-request checks, require `100644` canonical sources and allow only
   the exact `120000` Claude links to `AGENTS.md` and `../.agents/skills`. Compare
   index modes and blob IDs without following or printing PR-controlled paths.
