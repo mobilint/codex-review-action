@@ -84,20 +84,27 @@ tests validate bounded fallbacks without actually executing an unsafe command.
 
 ## Release channel
 
-The action is currently consumed through `mobilint/codex-review-action@main`.
-No validated `stable` branch exists yet. Keep `@main` for implementation and
+The central reusable workflow currently consumes the action from its reviewed
+commit SHA. The managed callers likewise pin the central workflow to a reviewed
+full commit SHA; never distribute a caller that uses a branch or tag. No
+validated `stable` branch exists yet. Use `main` only for implementation and
 canary validation, then:
 
-1. Validate automatic and mention reviews with the matching reusable workflow.
-2. Create and protect `stable` branches in both central repositories.
-3. Advance this action's `stable` ref first.
-4. Change `codex-pr-review.yml` to use the action's stable ref.
-5. Advance the `.github` stable ref and update the canonical caller.
-6. Distribute that caller change through managed synchronization PRs.
+1. Record the exact reviewed action candidate SHA while leaving production pinned.
+2. Canary that exact action directly in a controlled repository with auto and
+   mention event contexts; verify checkout, sandbox, and delivery.
+3. Promote the tested action SHA through a reviewed central workflow PR, keeping
+   its contract fixture synchronized. Validate routing at the resulting central SHA.
+4. Update the central canonical caller and generated example to that validated
+   workflow SHA, then distribute through reviewed consumer synchronization PRs.
 
-Organization administrators must require CI and review on `stable`, restrict
-direct pushes, and define who may advance it. Repository code cannot create
-those settings.
+Verify workflow SHA provenance in `mobilint/.github`, including existence of
+`.github/workflows/codex-pr-review.yml` at that ref. A 40-hex syntax check cannot
+validate provenance. Existing consumers migrate only when their caller PRs merge.
+Protected release branches may track releases but never replace the immutable
+references. Rollback requires reviewed caller updates to a validated rollback
+SHA; changing `main` or `stable` alone does not update pinned consumers. See the
+central maintainer guide for the full release and rollback procedure.
 
 ## Shared Codex and Claude guidance
 
@@ -109,3 +116,56 @@ The guide CI checks canonical files as tracked `100644` blobs and accepts only
 those two exact `120000` link targets by Git blob identity. It never dereferences
 PR-controlled links. Other source-file and managed-caller checks still reject
 symlinks. The regression tests cover valid links and hostile alternatives.
+
+## Multiple review runners
+
+Register each runner under a distinct name in group `codex`, with custom label
+`codex-reviewer`. Use separate installation and `_work` directories (on this
+server: `~/actions-runner` and `~/actions-runner-2`) and keep both services online.
+Each service user needs the tools listed in the action README, Codex credentials,
+and a working read-only sandbox. Shared-host runners share machine capacity;
+adding services does not add CPU or memory. The action uses a unique directory
+under `RUNNER_TEMP`, falling back to `TMPDIR` or `/tmp` outside Actions, and cleans
+up only its own directory. This describes the candidate action in this PR; the
+central deployed pin remains `2454440`, which uses `mktemp -d` under `TMPDIR`
+or `/tmp`. Deploying the candidate requires approval, a direct-action canary,
+and a separate reviewed central pin update. No custom dispatcher or runner-name
+binding is needed.
+
+An organization administrator should verify both registrations are online with
+the matching label, and that group `codex` permits each consuming repository
+(and its reusable workflow if workflow restrictions are enabled). Listing these
+settings through the REST API requires organization runner administration access;
+ordinary repository access is insufficient.
+
+After the central workflow is merged to the default branch, manually dispatch
+`Check reviewer runner pool` in `mobilint/.github`. It runs two independent jobs
+with `max-parallel: 2`, no checkout and no write permissions. Each checks tools and
+sandbox startup and stays occupied for 20 seconds. When both runners are idle,
+verify distinct runner names and overlapping execution intervals in the two job
+logs. A serial run alone does not prove failure: a runner may have been busy or
+offline. This smoke check does not authenticate a model request or publish a review.
+
+GitHub schedules eligible jobs, not jobs still waiting at the hosted gate or
+blocked by concurrency. Automatic reviews remain latest-update-wins per PR;
+mention reviews retain their bounded per-PR slots with `cancel-in-progress: false`,
+so a newer mention never interrupts the running review. A colliding mention waits
+for that slot even if another runner is idle. GitHub permits only one pending job
+per group by default: a third colliding request replaces the older pending job,
+not the running job, even with `cancel-in-progress: false`. See the official
+[concurrency documentation](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency).
+These are intentional review policies, not runner affinity. An already-running review is not migrated. A queued
+eligible job with an idle matching runner warrants checking its labels, group
+access, online status and runner service logs before changing concurrency policy.
+
+## Reviewing this repository
+
+`.github/workflows/code-review.yml` is an exact copy of the central managed
+caller. It delegates automatic and `@mobilint-review` reviews to a reviewed,
+SHA-pinned reusable workflow and its SHA-pinned deployed action, not the action
+code under review. When central workflow behavior changes, review that change,
+then synchronize every managed caller to the resulting full commit SHA.
+Comment events use the default-branch caller, so after the initial enrollment
+PR merges, post a fresh mention on existing PRs. The initial caller PR can be
+reviewed via its `pull_request.opened` event, including self-hosted fallback
+when the official reviewer has reached its usage limit.

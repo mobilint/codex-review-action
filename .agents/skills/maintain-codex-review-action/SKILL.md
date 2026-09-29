@@ -54,6 +54,8 @@ description: Maintain Mobilint's composite Codex PR review action. Use when chan
 - Run in the read-only sandbox by default and keep the unsafe fallback
   disabled in shared or public-repository callers.
 - Validate every identifier before constructing a GitHub API path.
+- Pin external reusable workflows and their downstream actions to reviewed full
+  commit SHAs, never mutable branches or tags.
 - For pull-request checks, require `100644` canonical sources and allow only
   the exact `120000` Claude links to `AGENTS.md` and `../.agents/skills`. Compare
   index modes and blob IDs without following or printing PR-controlled paths.
@@ -97,3 +99,19 @@ git diff --check
 For a security fix, also run the original malicious input and a legitimate
 control through the real boundary. Review the final diff for alternate sinks,
 fallback branches, unbounded output, and cross-repository contract drift.
+
+## Multiple runners
+
+Preserve group/label pool selection and per-invocation workspace isolation.
+Use the central manual `check-reviewer-pool.yml` workflow to check two eligible
+jobs; compare their runner names and execution intervals. Do not infer a pool
+failure from a job waiting on the gate or a per-PR concurrency group.
+
+Keep `.github/workflows/code-review.yml` identical to the central canonical
+caller; self-review uses the deployed pinned action, never PR action code.
+Comment-triggered reviews require this caller on the default branch.
+
+Pin managed reusable-workflow calls to a reviewed full commit SHA from
+`mobilint/.github`, verifying that the workflow exists at that revision. Keep
+the central template, generated example, and consumer callers synchronized.
+Check SHA provenance through GitHub; a 40-hex syntax test alone cannot prove it.

@@ -23,7 +23,7 @@ ALLOWED_OWNER="mobilint"
 USE_UNSANDBOXED_FALLBACK="false"
 normalize_review_runtime_inputs
 
-WORKDIR="$(mktemp -d)"
+WORKDIR="$(create_review_workdir)"
 REPO_DIR="${WORKDIR}/repo"
 REVIEW_DIR="${WORKDIR}/review-assets"
 COMMENT_JSON="${WORKDIR}/comment.json"
@@ -45,6 +45,8 @@ cleanup() {
 trap cleanup EXIT
 
 cd "${WORKDIR}"
+printf '[INFO] review runner=%s run=%s attempt=%s\n' \
+  "${RUNNER_NAME:-local}" "${GITHUB_RUN_ID:-local}" "${GITHUB_RUN_ATTEMPT:-1}"
 
 require_commands() {
   for cmd in gh git jq python3 codex; do

@@ -90,3 +90,9 @@ verify_pr_head_commit() {
     return 1
   fi
 }
+
+create_review_workdir() {
+  # Each runner supplies its own temp root; mktemp also isolates concurrent
+  # invocations when multiple services share a user or a fallback temp root.
+  mktemp -d "${RUNNER_TEMP:-${TMPDIR:-/tmp}}/codex-review.XXXXXXXXXX"
+}

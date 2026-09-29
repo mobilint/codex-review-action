@@ -31,6 +31,8 @@ content. Preserve these exact links and run the guide validation before finishin
 - `tests/`: unit and regression tests.
 - `config/codex-review-action-contract.json`: explicit cross-repository public
   input fixture.
+- `.github/workflows/code-review.yml`: canonical managed caller for automatic
+  and mention reviews through the central workflow and its pinned action.
 - `.github/workflows/check-action.yml`: ordinary unit, contract, syntax, and
   whitespace CI without live Codex or GitHub writes.
 - `.github/workflows/update-clone-badge.yml`: badge publisher for the orphan
@@ -88,6 +90,8 @@ guides, and skills together.
 - Store generated review assets outside the checked-out PR tree so hostile
   symlinks cannot redirect host-side writes.
 - Do not grant prompts network or connector access.
+- Pin external reusable workflows and their downstream actions to reviewed full
+  commit SHAs; never delegate self-hosted execution through a branch or tag.
 - Restrict caller and target repositories to Mobilint ownership.
 - Validate repository names and positive numeric PR, comment, review, and
   reaction identifiers before API path construction.
@@ -158,3 +162,17 @@ boundary when fixing a security issue.
 - Do not weaken sandboxing, trust, input validation, or visible failure
   handling to make a test pass.
 - Push badge artifacts only to `badges`; push source changes only to `main`.
+
+## Reviewer runner pool
+
+Use group `codex` and label `codex-reviewer` to select any idle matching runner.
+Do not bind reviews to a runner name or add a host-wide review lock. Each runner
+service needs a distinct installation/work directory, the required tools and
+Codex authentication, and working read-only sandbox support. Keep review assets
+unique per invocation and outside the PR checkout. Per-PR concurrency and gate
+waiting are separate from runner capacity and must not be bypassed for pooling.
+
+Pin managed reusable-workflow calls to a reviewed full commit SHA from
+`mobilint/.github`, verifying that the workflow exists at that revision. Keep
+the central template, generated example, and consumer callers synchronized.
+Check SHA provenance through GitHub; a 40-hex syntax test alone cannot prove it.
