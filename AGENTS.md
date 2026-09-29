@@ -31,6 +31,8 @@ content. Preserve these exact links and run the guide validation before finishin
 - `tests/`: unit and regression tests.
 - `config/codex-review-action-contract.json`: explicit cross-repository public
   input fixture.
+- `.github/workflows/code-review.yml`: canonical managed caller for automatic
+  and mention reviews through the central workflow and its pinned action.
 - `.github/workflows/check-action.yml`: ordinary unit, contract, syntax, and
   whitespace CI without live Codex or GitHub writes.
 - `.github/workflows/update-clone-badge.yml`: badge publisher for the orphan

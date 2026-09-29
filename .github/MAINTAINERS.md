@@ -109,3 +109,13 @@ The guide CI checks canonical files as tracked `100644` blobs and accepts only
 those two exact `120000` link targets by Git blob identity. It never dereferences
 PR-controlled links. Other source-file and managed-caller checks still reject
 symlinks. The regression tests cover valid links and hostile alternatives.
+
+## Reviewing this repository
+
+`.github/workflows/code-review.yml` is an exact copy of the central managed
+caller. It delegates automatic and `@mobilint-review` reviews to the reusable
+workflow and its deployed immutable action, not the action code under review.
+Comment events use the default-branch caller, so after the initial enrollment
+PR merges, post a fresh mention on existing PRs. The initial caller PR can be
+reviewed via its `pull_request.opened` event, including self-hosted fallback
+when the official reviewer has reached its usage limit.
