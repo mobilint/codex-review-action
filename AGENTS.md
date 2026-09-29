@@ -90,6 +90,8 @@ guides, and skills together.
 - Store generated review assets outside the checked-out PR tree so hostile
   symlinks cannot redirect host-side writes.
 - Do not grant prompts network or connector access.
+- Pin external reusable workflows and their downstream actions to reviewed full
+  commit SHAs; never delegate self-hosted execution through a branch or tag.
 - Restrict caller and target repositories to Mobilint ownership.
 - Validate repository names and positive numeric PR, comment, review, and
   reaction identifiers before API path construction.
@@ -169,3 +171,8 @@ service needs a distinct installation/work directory, the required tools and
 Codex authentication, and working read-only sandbox support. Keep review assets
 unique per invocation and outside the PR checkout. Per-PR concurrency and gate
 waiting are separate from runner capacity and must not be bypassed for pooling.
+
+Pin managed reusable-workflow calls to a reviewed full commit SHA from
+`mobilint/.github`, verifying that the workflow exists at that revision. Keep
+the central template, generated example, and consumer callers synchronized.
+Check SHA provenance through GitHub; a 40-hex syntax test alone cannot prove it.

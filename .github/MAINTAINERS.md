@@ -84,20 +84,27 @@ tests validate bounded fallbacks without actually executing an unsafe command.
 
 ## Release channel
 
-The action is currently consumed through `mobilint/codex-review-action@main`.
-No validated `stable` branch exists yet. Keep `@main` for implementation and
+The central reusable workflow currently consumes the action from its reviewed
+commit SHA. The managed callers likewise pin the central workflow to a reviewed
+full commit SHA; never distribute a caller that uses a branch or tag. No
+validated `stable` branch exists yet. Use `main` only for implementation and
 canary validation, then:
 
-1. Validate automatic and mention reviews with the matching reusable workflow.
-2. Create and protect `stable` branches in both central repositories.
-3. Advance this action's `stable` ref first.
-4. Change `codex-pr-review.yml` to use the action's stable ref.
-5. Advance the `.github` stable ref and update the canonical caller.
-6. Distribute that caller change through managed synchronization PRs.
+1. Record the exact reviewed action candidate SHA while leaving production pinned.
+2. Canary that exact action directly in a controlled repository with auto and
+   mention event contexts; verify checkout, sandbox, and delivery.
+3. Promote the tested action SHA through a reviewed central workflow PR, keeping
+   its contract fixture synchronized. Validate routing at the resulting central SHA.
+4. Update the central canonical caller and generated example to that validated
+   workflow SHA, then distribute through reviewed consumer synchronization PRs.
 
-Organization administrators must require CI and review on `stable`, restrict
-direct pushes, and define who may advance it. Repository code cannot create
-those settings.
+Verify workflow SHA provenance in `mobilint/.github`, including existence of
+`.github/workflows/codex-pr-review.yml` at that ref. A 40-hex syntax check cannot
+validate provenance. Existing consumers migrate only when their caller PRs merge.
+Protected release branches may track releases but never replace the immutable
+references. Rollback requires reviewed caller updates to a validated rollback
+SHA; changing `main` or `stable` alone does not update pinned consumers. See the
+central maintainer guide for the full release and rollback procedure.
 
 ## Shared Codex and Claude guidance
 
@@ -154,8 +161,10 @@ access, online status and runner service logs before changing concurrency policy
 ## Reviewing this repository
 
 `.github/workflows/code-review.yml` is an exact copy of the central managed
-caller. It delegates automatic and `@mobilint-review` reviews to the reusable
-workflow and its deployed immutable action, not the action code under review.
+caller. It delegates automatic and `@mobilint-review` reviews to a reviewed,
+SHA-pinned reusable workflow and its SHA-pinned deployed action, not the action
+code under review. When central workflow behavior changes, review that change,
+then synchronize every managed caller to the resulting full commit SHA.
 Comment events use the default-branch caller, so after the initial enrollment
 PR merges, post a fresh mention on existing PRs. The initial caller PR can be
 reviewed via its `pull_request.opened` event, including self-hosted fallback
