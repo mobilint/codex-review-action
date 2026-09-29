@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 import subprocess
+import os
+import shutil
 import tempfile
 import unittest
 
@@ -11,6 +13,44 @@ RUNTIME = ROOT / "scripts" / "review-runtime.sh"
 
 
 class ReviewRuntimeTests(unittest.TestCase):
+    def test_parallel_workdirs_are_unique_and_cleanup_is_independent(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for same_root in (True, False):
+                roots = [root / "runner1", root / ("runner1" if same_root else "runner2")]
+                processes = []
+                for temp_root in roots:
+                    temp_root.mkdir(exist_ok=True)
+                    env = {**os.environ, "RUNNER_TEMP": str(temp_root)}
+                    processes.append(subprocess.Popen(
+                        ["bash", "-c", 'source "$1"; create_review_workdir', "test", str(RUNTIME)],
+                        env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                    ))
+                paths = []
+                for process, temp_root in zip(processes, roots):
+                    out, err = process.communicate(timeout=10)
+                    self.assertEqual(process.returncode, 0, err)
+                    path = Path(out.strip())
+                    self.assertEqual(path.parent, temp_root)
+                    self.assertTrue(path.is_dir())
+                    (path / "review.json").write_text("private review")
+                    paths.append(path)
+                self.assertNotEqual(*paths)
+                shutil.rmtree(paths[0])
+                self.assertEqual((paths[1] / "review.json").read_text(), "private review")
+
+    def test_workdir_fallback_and_invalid_runner_temp(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            env = {**os.environ, "TMPDIR": directory}
+            env.pop("RUNNER_TEMP", None)
+            args = ["bash", "-c", 'source "$1"; create_review_workdir', "test", str(RUNTIME)]
+            result = subprocess.run(args, env=env, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(Path(result.stdout.strip()).parent, Path(directory))
+            env["RUNNER_TEMP"] = str(Path(directory) / "missing")
+            failed = subprocess.run(args, env=env, capture_output=True, text=True)
+            self.assertNotEqual(failed.returncode, 0)
+
     def normalize(
         self,
         *,

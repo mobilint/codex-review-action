@@ -98,6 +98,13 @@ For a security fix, also run the original malicious input and a legitimate
 control through the real boundary. Review the final diff for alternate sinks,
 fallback branches, unbounded output, and cross-repository contract drift.
 
+## Multiple runners
+
+Preserve group/label pool selection and per-invocation workspace isolation.
+Use the central manual `check-reviewer-pool.yml` workflow to check two eligible
+jobs; compare their runner names and execution intervals. Do not infer a pool
+failure from a job waiting on the gate or a per-PR concurrency group.
+
 Keep `.github/workflows/code-review.yml` identical to the central canonical
 caller; self-review uses the deployed pinned action, never PR action code.
 Comment-triggered reviews require this caller on the default branch.
