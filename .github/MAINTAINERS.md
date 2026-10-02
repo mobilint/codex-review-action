@@ -169,3 +169,25 @@ Comment events use the default-branch caller, so after the initial enrollment
 PR merges, post a fresh mention on existing PRs. The initial caller PR can be
 reviewed via its `pull_request.opened` event, including self-hosted fallback
 when the official reviewer has reached its usage limit.
+
+## Official connector quota fallback
+
+The central reusable workflow checks official output immediately, then every
+15 seconds during the configured wait (five minutes by default). A recognized
+quota or review-credit error from `chatgpt-codex-connector[bot]` starts local
+fallback on the next check, including “You have reached your Codex usage limits
+for code reviews.” Completed reviews or 👍 end the wait immediately. Silence retains the timeout;
+mention reviews bypass it.
+Checks use the triggering PR event timestamp, require the current head for
+reviews, and ignore matching text from other authors or older comments. An eyes
+reaction does not end polling early because the connector can report quota
+failure afterward. Trust gates and runner scheduling still apply.
+
+This behavior is implemented in the central workflow, not the action. Consumers
+pinned to older workflow SHAs need a reviewed caller-pin update after this
+central change merges; their behavior does not change merely by updating the
+action. Keep timeout, author, timestamp, and head guards covered by regression
+tests when editing fallback detection. Polling uses one bounded GraphQL query
+per check for the newest 100 reviews, comments, and reactions. Partial API errors
+fail visibly. Configured waits accept 0–20 minutes; invalid or larger values use
+the five-minute default, leaving headroom within the 30-minute gate timeout.
