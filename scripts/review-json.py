@@ -92,6 +92,9 @@ def filter_command(args: argparse.Namespace) -> int:
         if not body:
             continue
 
+        # Cached prompts/model output may already prefix the title with badges.
+        # The normalized priority field owns the displayed priority.
+        title = re.sub(r"^(?:\[P[012]\]\s*)+", "", title, flags=re.I).strip()
         heading = f"[{priority}] {title}" if title else f"[{priority}]"
         body = f"**{heading}**\n\n{body}"
 
