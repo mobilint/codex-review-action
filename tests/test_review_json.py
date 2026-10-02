@@ -64,6 +64,36 @@ class ReviewJsonTests(unittest.TestCase):
                 "This error path returns a successful result.",
             )
 
+    def test_filter_normalizes_existing_title_badges(self) -> None:
+        cases = [
+            ("[P2] Avoid a false warning on Korean CLI runs", "[P2] Avoid a false warning on Korean CLI runs"),
+            ("[P2][P2] Repeated label", "[P2] Repeated label"),
+            ("[p1] [P0] Conflicting labels", "[P2] Conflicting labels"),
+            ("[P2]", "[P2]"),
+            ("Keep [P1] inside the title", "[P2] Keep [P1] inside the title"),
+            ("[P3] Unrecognized label", "[P2] [P3] Unrecognized label"),
+        ]
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            files = root / "files"
+            lines = root / "lines"
+            source = root / "source.json"
+            output = root / "output.json"
+            files.write_text("example.py\n", encoding="utf-8")
+            lines.write_text('{"example.py": [1]}', encoding="utf-8")
+            for title, heading in cases:
+                with self.subTest(title=title):
+                    source.write_text(json.dumps({"findings": [{
+                        "path": "example.py", "line": 1, "priority": "P2",
+                        "title": title, "body": "Concrete defect.",
+                    }]}), encoding="utf-8")
+                    review_json.filter_command(argparse.Namespace(
+                        input=str(source), output=str(output),
+                        changed_files=str(files), changed_lines=str(lines),
+                    ))
+                    actual = json.loads(output.read_text(encoding="utf-8"))["findings"][0]["body"]
+                    self.assertEqual(actual, f"**{heading}**\n\nConcrete defect.")
+
     def test_filter_bounds_and_prioritizes_large_finding_sets(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)

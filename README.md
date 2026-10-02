@@ -113,3 +113,10 @@ tests when editing fallback detection. Polling uses one bounded GraphQL query
 per check for the newest 100 reviews, comments, and reactions. Partial API errors
 fail visibly. Configured waits accept 0–20 minutes; invalid or larger values use
 the five-minute default, leaving headroom within the 30-minute gate timeout.
+
+Finding headings receive one priority badge from the normalized `priority` field.
+Prompts keep titles free of leading priority badges; the formatter also removes
+repeated leading `[P0]`, `[P1]`, or `[P2]` labels from older model output. The
+priority field determines the displayed label even when a title prefix disagrees.
+Labels within title text are preserved. Keep regression coverage at the filtering
+boundary when changing heading formatting.

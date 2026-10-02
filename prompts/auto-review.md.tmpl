@@ -60,7 +60,7 @@ Rules for findings:
 - Set outcome to "findings" when any significant issue exists, including in summary-only mode when it cannot be attached to an inline finding.
 - Only include a finding when you have strong evidence from the diff or checked-out code.
 - Prefer at most 8 findings.
-- Assign exactly one priority badge to every finding:
+- Set exactly one priority in each finding's "priority" field. Keep "title" as plain text without a leading [P0], [P1], or [P2] badge; the formatter adds the visible badge:
   - P0: release-blocking or immediately exploitable; the change must not merge as written.
   - P1: serious correctness, security, reliability, or data-loss risk that should be fixed before merge.
   - P2: bounded but actionable defect or important missing test that should be fixed soon.
