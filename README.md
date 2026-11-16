@@ -92,9 +92,11 @@ See the maintainer guide for setup and the configurable pool check.
 This repository uses the central managed review caller, pinned to a reviewed
 full commit SHA. The central workflow also pins the deployed action by commit;
 neither privileged dependency is resolved from a mutable branch or tag. After
-that caller is on `main`, new PRs use the official reviewer first and fall back
-to self-hosted review automatically. After addressing findings, trusted
-contributors can request another review with `@mobilint-review`.
+that caller is on `main`, new PRs use the official reviewer first. Eligible PRs
+fall back to self-hosted review on recognized quota/review-credit errors, or when
+the configured wait expires without an official completion or clean reaction.
+After addressing findings, trusted contributors can request another review
+with `@mobilint-review`.
 
 ## Official connector quota fallback
 
