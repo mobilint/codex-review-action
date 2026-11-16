@@ -236,8 +236,11 @@ explicit settings in newer actions take precedence.
 
 ## Run exact-SHA canaries
 
-After merging this action, create or choose a controlled open PR in this
-repository. Dispatch the default-branch-only manual workflow:
+After merging this action, use a controlled open PR in this repository authored
+by the workflow operator, from the same-repository branch
+`test/reviewer-release-canary` into the default branch. The fixed branch is a
+canary allowlist; do not use it for production development. Dispatch the
+default-branch-only manual workflow:
 
 ```bash
 gh workflow run canary-review-action.yml -R mobilint/codex-review-action \
@@ -245,9 +248,13 @@ gh workflow run canary-review-action.yml -R mobilint/codex-review-action \
 ```
 
 Its hosted preflight requires a 40-hex commit reachable from the default branch
-and an open target PR, using only read permissions. Only then does it allocate
+and the operator-authored, same-repository allowlisted target, using only read
+permissions. Only then does it allocate
 runners. Write scopes are restricted to the canary job. Each matrix job
-checks out that verified revision with credential persistence disabled and
+uses the immutable checkout v6 revision
+`d23441a48e516b6c34aea4fa41551a30e30af803` (verified against the upstream v6
+ref and signed commit) to check out the verified action revision with credential
+persistence disabled, then
 invokes the local composite action directly with explicit auto/pull_request or
 mention/issue_comment inputs. The mention job creates an actionable
 `@mobilint-review` source comment on the

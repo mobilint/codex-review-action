@@ -161,7 +161,9 @@ quota-consuming authenticated smoke check; it remains default-branch-only.
 Use the default-branch-only `canary-review-action.yml` manual workflow after
 merging a reviewed action. It verifies candidate SHA ancestry on a hosted job
 before runner allocation, then directly invokes that exact checkout for auto
-and mention modes on a controlled open PR in this repository. It publishes
+and mention modes on an operator-authored, same-repository PR from the fixed
+`test/reviewer-release-canary` branch into the default branch. Pin checkout to
+a reviewed immutable v6 commit. The canary publishes
 real reviews/reactions and an actionable `@mobilint-review` source comment.
 Keep hosted preflight read-only and grant write scopes only to the canary job.
 Do not use a

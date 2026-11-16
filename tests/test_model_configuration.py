@@ -4,6 +4,7 @@ import os
 import re
 import subprocess
 import tempfile
+import textwrap
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -88,3 +89,42 @@ class ModelConfigurationTests(unittest.TestCase):
         canary = text.split('  canary:', 1)[1]
         self.assertIn('issues: write', canary)
         self.assertIn('pull-requests: write', canary)
+
+    def test_canary_preflight_enforces_trusted_target_and_revision(self) -> None:
+        text = (ROOT / '.github/workflows/canary-review-action.yml').read_text()
+        script = textwrap.dedent(text.split('        run: |\n', 1)[1].split('\n  canary:', 1)[0])
+        trusted = {
+            'state': 'open', 'user': {'login': 'operator'},
+            'head': {'repo': {'full_name': 'mobilint/codex-review-action'},
+                     'ref': 'test/reviewer-release-canary'},
+            'base': {'ref': 'main'},
+        }
+        cases = [(trusted, 'ahead', True), (trusted, 'identical', True),
+                 (trusted, 'diverged', False), (trusted, 'behind', False)]
+        for field, value in [('state', 'closed'), ('user', {'login': 'someone-else'}),
+                             ('head', {'repo': {'full_name': 'attacker/fork'}, 'ref': 'test/reviewer-release-canary'}),
+                             ('head', {'repo': {'full_name': 'mobilint/codex-review-action'}, 'ref': 'untrusted'}),
+                             ('base', {'ref': 'other'})]:
+            cases.append(({**trusted, field: value}, 'ahead', False))
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            fake = root / 'gh'
+            fake.write_text('#!/usr/bin/python3\nimport json,os,sys\n'
+                            'print(json.dumps({"base_commit":{"sha":os.environ["ACTION_SHA"]},'
+                            '"status":os.environ["COMPARISON_STATUS"]}) if "/compare/" in sys.argv[2] '
+                            'else os.environ["TARGET_JSON"])\n')
+            fake.chmod(0o755)
+            for target, status, allowed in cases:
+                with self.subTest(target=target, status=status):
+                    result = subprocess.run(['bash', '-c', script], capture_output=True, text=True,
+                        env={**os.environ, 'PATH': directory + ':' + os.environ['PATH'],
+                             'ACTION_SHA': 'a' * 40, 'PR_NUMBER': '18', 'OPERATOR': 'operator',
+                             'GITHUB_REPOSITORY': 'mobilint/codex-review-action',
+                             'DEFAULT_BRANCH': 'main', 'GITHUB_OUTPUT': str(root / 'output'),
+                             'TARGET_JSON': json.dumps(target), 'COMPARISON_STATUS': status})
+                    self.assertEqual(result.returncode == 0, allowed, result.stderr)
+
+    def test_canary_checkout_is_an_immutable_v6_revision(self) -> None:
+        text = (ROOT / '.github/workflows/canary-review-action.yml').read_text()
+        self.assertIn('actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6', text)
+        self.assertNotIn('actions/checkout@v6', text)

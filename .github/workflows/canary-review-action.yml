@@ -38,14 +38,20 @@ jobs:
           ACTION_SHA: ${{ inputs.action_sha }}
           PR_NUMBER: ${{ inputs.pr_number }}
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          OPERATOR: ${{ github.actor }}
         run: |
           set -euo pipefail
           [[ "$ACTION_SHA" =~ ^[0-9a-f]{40}$ ]]
           [[ "$PR_NUMBER" =~ ^[1-9][0-9]*$ && ${#PR_NUMBER} -le 12 ]]
           comparison=$(gh api "repos/$GITHUB_REPOSITORY/compare/$ACTION_SHA...$DEFAULT_BRANCH")
           jq -e --arg sha "$ACTION_SHA" '.base_commit.sha == $sha and (.status == "ahead" or .status == "identical")' <<< "$comparison" >/dev/null
-          state=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER" --jq .state)
-          [[ "$state" == open ]]
+          target=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER")
+          jq -e --arg operator "$OPERATOR" --arg repo "$GITHUB_REPOSITORY" \
+            --arg base "$DEFAULT_BRANCH" '
+            .state == "open" and .user.login == $operator and
+            .head.repo.full_name == $repo and
+            .head.ref == "test/reviewer-release-canary" and .base.ref == $base
+          ' <<< "$target" >/dev/null
           echo "action_sha=$ACTION_SHA" >> "$GITHUB_OUTPUT"
 
   canary:
@@ -68,7 +74,7 @@ jobs:
     timeout-minutes: 45
     steps:
       - name: Check out the verified action revision
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           ref: ${{ needs.verify.outputs.action_sha }}
           persist-credentials: false
