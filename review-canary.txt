@@ -1,0 +1,5 @@
+Controlled Codex action release canary.
+
+This documentation-only fixture is used to verify automatic and mention review
+delivery against an exact reviewed action commit. Close this PR after validation;
+do not merge the fixture into the repository.
