@@ -216,8 +216,12 @@ values use the documented defaults. CLI selection ignores interactive user
 configuration. Log the selection in the job summary without credentials.
 The runner wrapper must allow explicit action options to override its defaults.
 Keep candidate settings separate from deployed settings until reviewed canary
-and SHA promotion complete. The pool probe supports 1–5 slots and an optional
-quota-consuming authenticated smoke check; it remains default-branch-only.
+and SHA promotion complete. Keep pool capacity registration-based: the current
+five runners are inventory, not a policy cap. Select diagnostic counts accepted
+by the current central workflow's validation, independently of production
+capacity. The optional authenticated smoke check uses quota; the probe remains
+default-branch-only. Link current central operations guidance rather than
+hardcoding a diagnostic bound that could become stale.
 
 Use the default-branch-only `canary-review-action.yml` manual workflow after
 merging a reviewed action. It verifies candidate SHA ancestry on a hosted job
@@ -227,5 +231,8 @@ and mention modes on an operator-authored, same-repository PR from the fixed
 a reviewed immutable v6 commit. The canary publishes
 real reviews/reactions and an actionable `@mobilint-review` source comment.
 Keep hosted preflight read-only and grant write scopes only to the canary job.
-Do not use a
-consumer's ordinary deployed self-review as evidence of candidate execution.
+Do not use a consumer's ordinary deployed self-review as evidence of candidate
+execution. For caller rollouts, verify action canaries and exact central auto and
+mention routing before publishing. New PRs use the official reviewer first and
+automatic self-hosted fallback; request another review after addressing findings
+with a comment starting `@mobilint-review` and including review guidelines.

@@ -83,16 +83,18 @@ and `.agents/skills`; `CLAUDE.md` and `.claude/skills` use those same files.
 ## Multiple review runners
 
 The central workflow targets runner group `codex` and label `codex-reviewer`.
-GitHub assigns eligible queued jobs to any idle matching runner. Two registered,
-online runners can execute two reviews at once; additional eligible jobs wait
-for capacity. This does not bypass the trust gate or per-PR concurrency policy.
-See the maintainer guide for setup and the manual pool check.
+GitHub assigns eligible queued jobs to any idle matching runner, one review per
+runner. Capacity grows or shrinks as matching runners are registered or removed;
+the current five-runner installation is an example, not a policy limit. Extra
+jobs wait for capacity. The trust gate and per-PR concurrency policy still apply.
+See the maintainer guide for setup and the configurable pool check.
 
 This repository uses the central managed review caller, pinned to a reviewed
 full commit SHA. The central workflow also pins the deployed action by commit;
 neither privileged dependency is resolved from a mutable branch or tag. After
-that caller is on `main`, trusted contributors can request a self-hosted review
-with `@mobilint-review` on a pull request.
+that caller is on `main`, new PRs use the official reviewer first and fall back
+to self-hosted review automatically. After addressing findings, trusted
+contributors can request another review with `@mobilint-review`.
 
 ## Official connector quota fallback
 
@@ -125,14 +127,18 @@ boundary when changing heading formatting.
 
 ## Review model selection
 
-The candidate action adds `model` (default `gpt-6-luna`) and `reasoning_effort`
+The action accepts `model` (default `gpt-6-luna`) and `reasoning_effort`
 (default `max`). The central workflow forwards both settings. Selection is
 explicit on the Codex CLI and appears in the job summary; interactive user
 configuration is ignored for review execution. Unsupported effort values and
 invalid model identifiers fall back to the defaults. A valid identifier still
 requires a model available to the authenticated account.
 
-These changes take effect for consumers only after the action canary, central
-SHA promotion, and caller-pin rollout described in the maintainer guide.
+The caller rollout selects reviewed central revision
+`17c7413b49c0aa056965bd03850685bb1e59a1b8`, which invokes action revision
+`c156f3b883e3317f0c5a5a5fa9137f7bc2c07ad1`. The exact action passed
+[automatic and mention canaries](https://github.com/mobilint/codex-review-action/actions/runs/43829681155).
+The selection takes effect in this repository when its caller rollout merges;
+other consumers retain their own pins until their rollout PRs merge.
 Runner installation and add/remove procedures are maintained in
 [`mobilint/.github`'s maintainer guide](https://github.com/mobilint/.github/blob/main/.github/MAINTAINERS.md#runner-installation-and-removal).
