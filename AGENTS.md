@@ -218,3 +218,10 @@ The runner wrapper must allow explicit action options to override its defaults.
 Keep candidate settings separate from deployed settings until reviewed canary
 and SHA promotion complete. The pool probe supports 1–5 slots and an optional
 quota-consuming authenticated smoke check; it remains default-branch-only.
+
+Use the default-branch-only `canary-review-action.yml` manual workflow after
+merging a reviewed action. It verifies candidate SHA ancestry on a hosted job
+before runner allocation, then directly invokes that exact checkout for auto
+and mention modes on a controlled open PR in this repository. It publishes
+real reviews/reactions and a controlled mention source comment. Do not use a
+consumer's ordinary deployed self-review as evidence of candidate execution.

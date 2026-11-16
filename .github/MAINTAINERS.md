@@ -41,6 +41,8 @@ The maintained inputs are:
 - `ack_reaction_target`
 - `max_files`
 - `max_diff_chars`
+- `model`
+- `reasoning_effort`
 - `sandbox_mode`
 - `allow_unsafe_no_sandbox_fallback`
 
@@ -231,3 +233,25 @@ by the central [runner operations guide](https://github.com/mobilint/.github/blo
 Use its versioned `scripts/runner-codex` wrapper when running older actions:
 it supplies configuration defaults rather than duplicate `--model` flags, so
 explicit settings in newer actions take precedence.
+
+## Run exact-SHA canaries
+
+After merging this action, create or choose a controlled open PR in this
+repository. Dispatch the default-branch-only manual workflow:
+
+```bash
+gh workflow run canary-review-action.yml -R mobilint/codex-review-action \
+  -f action_sha=FULL_REVIEWED_ACTION_SHA -f pr_number=CONTROLLED_PR_NUMBER
+```
+
+Its hosted preflight requires a 40-hex commit reachable from the default branch
+and an open target PR. Only then does it allocate runners. Each matrix job
+checks out that verified revision with credential persistence disabled and
+invokes the local composite action directly with explicit auto/pull_request or
+mention/issue_comment inputs. The mention job creates a source comment on the
+controlled PR. It uses the repository workflow token, Luna/max, and read-only
+sandboxing; it never enables the unsafe fallback. This tests action behavior,
+not central event/trust routing. Verify posted reviews or clean reactions,
+runner summaries, and both job conclusions; record the run URL before promoting
+the central action pin. Close a temporary canary PR after testing rather than
+merging its fixture change.

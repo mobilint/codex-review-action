@@ -53,3 +53,13 @@ class ModelConfigurationTests(unittest.TestCase):
         self.assertEqual(script.count('execute_review_codex \\'), 2)
         self.assertIn('normalize_review_model_inputs', script)
         self.assertIn('GITHUB_STEP_SUMMARY', script)
+
+    def test_canary_validates_exact_revision_before_runner_allocation(self) -> None:
+        text = (ROOT / '.github/workflows/canary-review-action.yml').read_text()
+        self.assertEqual(text.count("github.repository == 'mobilint/codex-review-action'"), 2)
+        self.assertEqual(text.count('github.event.repository.default_branch'), 3)
+        for fragment in ('needs: verify', '^[0-9a-f]{40}$', 'uses: ./candidate',
+                         'ref: ${{ needs.verify.outputs.action_sha }}',
+                         'persist-credentials: false', 'mode: [auto, mention]',
+                         'allow_unsafe_no_sandbox_fallback: false'):
+            self.assertIn(fragment, text)
