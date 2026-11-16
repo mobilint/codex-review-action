@@ -1,0 +1,108 @@
+name: Canary exact review action SHA
+
+on:
+  workflow_dispatch:
+    inputs:
+      action_sha:
+        description: Reviewed full action commit SHA reachable from main
+        required: true
+        type: string
+      pr_number:
+        description: Open controlled canary PR in this repository (reviews/comments will be posted)
+        required: true
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: exact-review-action-canary
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    permissions:
+      contents: read
+      pull-requests: read
+    if: >-
+      github.repository == 'mobilint/codex-review-action' &&
+      github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      action_sha: ${{ steps.verify.outputs.action_sha }}
+    steps:
+      - id: verify
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ACTION_SHA: ${{ inputs.action_sha }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          OPERATOR: ${{ github.actor }}
+        run: |
+          set -euo pipefail
+          [[ "$ACTION_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$PR_NUMBER" =~ ^[1-9][0-9]*$ && ${#PR_NUMBER} -le 12 ]]
+          comparison=$(gh api "repos/$GITHUB_REPOSITORY/compare/$ACTION_SHA...$DEFAULT_BRANCH")
+          jq -e --arg sha "$ACTION_SHA" '.base_commit.sha == $sha and (.status == "ahead" or .status == "identical")' <<< "$comparison" >/dev/null
+          target=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER")
+          jq -e --arg operator "$OPERATOR" --arg repo "$GITHUB_REPOSITORY" \
+            --arg base "$DEFAULT_BRANCH" '
+            .state == "open" and .user.login == $operator and
+            .head.repo.full_name == $repo and
+            .head.ref == "test/reviewer-release-canary" and .base.ref == $base
+          ' <<< "$target" >/dev/null
+          echo "action_sha=$ACTION_SHA" >> "$GITHUB_OUTPUT"
+
+  canary:
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+    needs: verify
+    if: >-
+      github.repository == 'mobilint/codex-review-action' &&
+      github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        mode: [auto, mention]
+    runs-on:
+      group: codex
+      labels: codex-reviewer
+    timeout-minutes: 45
+    steps:
+      - name: Check out the verified action revision
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ needs.verify.outputs.action_sha }}
+          persist-credentials: false
+          path: candidate
+
+      - name: Create controlled mention context
+        if: matrix.mode == 'mention'
+        id: mention
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+        run: |
+          set -euo pipefail
+          comment_id=$(gh api -X POST "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments" \
+            -f body='@mobilint-review Controlled mention-mode canary: review this PR for correctness and security; report actionable findings or explicitly confirm it is clean.' --jq .id)
+          echo "comment_id=$comment_id" >> "$GITHUB_OUTPUT"
+
+      - name: Invoke the exact candidate directly
+        uses: ./candidate
+        with:
+          repo: ${{ github.repository }}
+          pr_number: ${{ inputs.pr_number }}
+          event_name: ${{ matrix.mode == 'auto' && 'pull_request' || 'issue_comment' }}
+          mode: ${{ matrix.mode }}
+          comment_id: ${{ steps.mention.outputs.comment_id }}
+          commenter: github-actions[bot]
+          model: gpt-6-luna
+          reasoning_effort: max
+          sandbox_mode: read-only
+          allow_unsafe_no_sandbox_fallback: false

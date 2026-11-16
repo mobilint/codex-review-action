@@ -40,6 +40,8 @@ pull request.
 - `max_files`: summary-only threshold (default `500`, maximum `5000`).
 - `max_diff_chars`: diff truncation threshold (default `1000000`, maximum
   `5000000`).
+- `model`: review model (default `gpt-6-luna`).
+- `reasoning_effort`: low, medium, high, xhigh, or max (default `max`).
 - `sandbox_mode`: Codex sandbox mode (default `read-only`).
 - `allow_unsafe_no_sandbox_fallback`: legacy escape hatch for a separately
   isolated trusted runner (default `false`).
@@ -120,3 +122,17 @@ repeated leading `[P0]`, `[P1]`, or `[P2]` labels from older model output. The
 priority field determines the displayed label even when a title prefix disagrees.
 Labels within title text are preserved. Keep regression coverage at the filtering
 boundary when changing heading formatting.
+
+## Review model selection
+
+The candidate action adds `model` (default `gpt-6-luna`) and `reasoning_effort`
+(default `max`). The central workflow forwards both settings. Selection is
+explicit on the Codex CLI and appears in the job summary; interactive user
+configuration is ignored for review execution. Unsupported effort values and
+invalid model identifiers fall back to the defaults. A valid identifier still
+requires a model available to the authenticated account.
+
+These changes take effect for consumers only after the action canary, central
+SHA promotion, and caller-pin rollout described in the maintainer guide.
+Runner installation and add/remove procedures are maintained in
+[`mobilint/.github`'s maintainer guide](https://github.com/mobilint/.github/blob/main/.github/MAINTAINERS.md#runner-installation-and-removal).

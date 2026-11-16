@@ -38,6 +38,14 @@ inputs:
     description: Threshold for diff truncation
     required: false
     default: "1000000"
+  model:
+    description: Codex model used for reviews
+    required: false
+    default: "gpt-6-luna"
+  reasoning_effort:
+    description: Codex reasoning effort (low, medium, high, xhigh, max)
+    required: false
+    default: "max"
   sandbox_mode:
     description: Codex sandbox mode to request
     required: false
@@ -63,6 +71,8 @@ runs:
         INPUT_ACK_REACTION_TARGET: ${{ inputs.ack_reaction_target }}
         INPUT_MAX_FILES: ${{ inputs.max_files }}
         INPUT_MAX_DIFF_CHARS: ${{ inputs.max_diff_chars }}
+        INPUT_MODEL: ${{ inputs.model }}
+        INPUT_REASONING_EFFORT: ${{ inputs.reasoning_effort }}
         INPUT_SANDBOX_MODE: ${{ inputs.sandbox_mode }}
         INPUT_ALLOW_UNSAFE_NO_SANDBOX_FALLBACK: ${{ inputs.allow_unsafe_no_sandbox_fallback }}
         GH_TOKEN: ${{ github.token }}

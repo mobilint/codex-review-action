@@ -103,7 +103,7 @@ fallback branches, unbounded output, and cross-repository contract drift.
 ## Multiple runners
 
 Preserve group/label pool selection and per-invocation workspace isolation.
-Use the central manual `check-reviewer-pool.yml` workflow to check two eligible
+Use the central manual `check-reviewer-pool.yml` workflow to check up to five eligible
 jobs; compare their runner names and execution intervals. Do not infer a pool
 failure from a job waiting on the gate or a per-PR concurrency group.
 
@@ -144,3 +144,27 @@ repeated leading `[P0]`, `[P1]`, or `[P2]` labels from older model output. The
 priority field determines the displayed label even when a title prefix disagrees.
 Labels within title text are preserved. Keep regression coverage at the filtering
 boundary when changing heading formatting.
+
+## Explicit review model configuration
+
+The action accepts `model` (default `gpt-6-luna`) and `reasoning_effort`
+(default `max`). Keep the composite env handoff, both contract fixtures, central
+workflow inputs, and CLI arguments synchronized. Model names must be bounded
+ASCII identifiers; effort must be one of low/medium/high/xhigh/max. Invalid
+values use the documented defaults. CLI selection ignores interactive user
+configuration. Log the selection in the job summary without credentials.
+The runner wrapper must allow explicit action options to override its defaults.
+Keep candidate settings separate from deployed settings until reviewed canary
+and SHA promotion complete. The pool probe supports 1–5 slots and an optional
+quota-consuming authenticated smoke check; it remains default-branch-only.
+
+Use the default-branch-only `canary-review-action.yml` manual workflow after
+merging a reviewed action. It verifies candidate SHA ancestry on a hosted job
+before runner allocation, then directly invokes that exact checkout for auto
+and mention modes on an operator-authored, same-repository PR from the fixed
+`test/reviewer-release-canary` branch into the default branch. Pin checkout to
+a reviewed immutable v6 commit. The canary publishes
+real reviews/reactions and an actionable `@mobilint-review` source comment.
+Keep hosted preflight read-only and grant write scopes only to the canary job.
+Do not use a
+consumer's ordinary deployed self-review as evidence of candidate execution.
