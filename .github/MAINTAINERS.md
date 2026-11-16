@@ -245,10 +245,12 @@ gh workflow run canary-review-action.yml -R mobilint/codex-review-action \
 ```
 
 Its hosted preflight requires a 40-hex commit reachable from the default branch
-and an open target PR. Only then does it allocate runners. Each matrix job
+and an open target PR, using only read permissions. Only then does it allocate
+runners. Write scopes are restricted to the canary job. Each matrix job
 checks out that verified revision with credential persistence disabled and
 invokes the local composite action directly with explicit auto/pull_request or
-mention/issue_comment inputs. The mention job creates a source comment on the
+mention/issue_comment inputs. The mention job creates an actionable
+`@mobilint-review` source comment on the
 controlled PR. It uses the repository workflow token, Luna/max, and read-only
 sandboxing; it never enables the unsafe fallback. This tests action behavior,
 not central event/trust routing. Verify posted reviews or clean reactions,

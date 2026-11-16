@@ -223,5 +223,7 @@ Use the default-branch-only `canary-review-action.yml` manual workflow after
 merging a reviewed action. It verifies candidate SHA ancestry on a hosted job
 before runner allocation, then directly invokes that exact checkout for auto
 and mention modes on a controlled open PR in this repository. It publishes
-real reviews/reactions and a controlled mention source comment. Do not use a
+real reviews/reactions and an actionable `@mobilint-review` source comment.
+Keep hosted preflight read-only and grant write scopes only to the canary job.
+Do not use a
 consumer's ordinary deployed self-review as evidence of candidate execution.

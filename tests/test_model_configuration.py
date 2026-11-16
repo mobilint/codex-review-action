@@ -1,6 +1,7 @@
 from pathlib import Path
 import json
 import os
+import re
 import subprocess
 import tempfile
 import unittest
@@ -63,3 +64,27 @@ class ModelConfigurationTests(unittest.TestCase):
                          'persist-credentials: false', 'mode: [auto, mention]',
                          'allow_unsafe_no_sandbox_fallback: false'):
             self.assertIn(fragment, text)
+
+    def test_canary_source_comment_passes_the_real_mention_parser(self) -> None:
+        text = (ROOT / '.github/workflows/canary-review-action.yml').read_text()
+        match = re.search(r"-f body='([^']*)'", text)
+        self.assertIsNotNone(match)
+        body = match.group(1)
+        with tempfile.TemporaryDirectory() as directory:
+            payload = Path(directory) / 'comment.json'
+            for candidate, expected in [(body, 0), (body.replace('@mobilint-review ', ''), 1)]:
+                payload.write_text(json.dumps({'body': candidate}))
+                result = subprocess.run(['python3', str(ROOT / 'scripts/comment-mentions.py'),
+                                         '--input', str(payload)], capture_output=True, text=True)
+                self.assertEqual(result.returncode, expected, result.stderr)
+
+    def test_canary_preflight_has_no_write_scopes(self) -> None:
+        text = (ROOT / '.github/workflows/canary-review-action.yml').read_text()
+        verify = text.split('  verify:', 1)[1].split('  canary:', 1)[0]
+        self.assertIn('permissions: {}', text.split('jobs:', 1)[0])
+        self.assertNotIn(': write', verify)
+        self.assertIn('contents: read', verify)
+        self.assertIn('pull-requests: read', verify)
+        canary = text.split('  canary:', 1)[1]
+        self.assertIn('issues: write', canary)
+        self.assertIn('pull-requests: write', canary)
