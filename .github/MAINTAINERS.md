@@ -198,3 +198,36 @@ repeated leading `[P0]`, `[P1]`, or `[P2]` labels from older model output. The
 priority field determines the displayed label even when a title prefix disagrees.
 Labels within title text are preserved. Keep regression coverage at the filtering
 boundary when changing heading formatting.
+
+## Model configuration and rollout status
+
+The candidate action accepts `model` and `reasoning_effort`, defaulting to
+`gpt-6-luna` and `max`. Both sandbox execution paths use validated CLI arguments
+and `--ignore-user-config`; no connectors or interactive profiles are inherited
+from the user config. Project configuration remains subject to Codex's normal
+trust and configuration handling. Model names are limited to 128 ASCII letters,
+digits, dots, underscores, and hyphens, starting with a letter or digit. Effort
+is low/medium/high/xhigh/max. Invalid inputs fall back to the defaults.
+
+The managed caller now proposes central revision
+`4cabbe49c0e7a521c24c36459b572910386cb40d`, verified through the GitHub Contents
+API and merged PR #14. It includes prompt quota fallback, but still uses the
+previous action pin. It does not deploy this candidate action.
+
+The previous action pin `2454440c864b485d23ae3c3a4078f0adb445c497`
+and action main `64ec9f23019340099d0f045e6fc02963fae07ea8` have divergent
+history. The three commits exclusive to the previous pin are mode inference
+and merge commits. Main retains mode inference with regression coverage; the
+candidate adds explicit model selection. Review the complete comparison rather
+than assuming a fast-forward release. Before merging the central promotion,
+merge/review the action candidate, run its exact SHA directly for auto and
+mention events, record canary run links, and update the central pin if the
+merge changes that SHA. Then validate central routing and distribute the
+resulting central SHA through operator-run consumer PRs. Do not point consumer
+callers at an unvalidated central candidate.
+
+Runner installation, capacity checks, and safe add/remove procedures are owned
+by the central [runner operations guide](https://github.com/mobilint/.github/blob/main/.github/MAINTAINERS.md#runner-installation-and-removal).
+Use its versioned `scripts/runner-codex` wrapper when running older actions:
+it supplies configuration defaults rather than duplicate `--model` flags, so
+explicit settings in newer actions take precedence.

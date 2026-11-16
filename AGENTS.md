@@ -205,3 +205,16 @@ repeated leading `[P0]`, `[P1]`, or `[P2]` labels from older model output. The
 priority field determines the displayed label even when a title prefix disagrees.
 Labels within title text are preserved. Keep regression coverage at the filtering
 boundary when changing heading formatting.
+
+## Explicit review model configuration
+
+The action accepts `model` (default `gpt-6-luna`) and `reasoning_effort`
+(default `max`). Keep the composite env handoff, both contract fixtures, central
+workflow inputs, and CLI arguments synchronized. Model names must be bounded
+ASCII identifiers; effort must be one of low/medium/high/xhigh/max. Invalid
+values use the documented defaults. CLI selection ignores interactive user
+configuration. Log the selection in the job summary without credentials.
+The runner wrapper must allow explicit action options to override its defaults.
+Keep candidate settings separate from deployed settings until reviewed canary
+and SHA promotion complete. The pool probe supports 1–5 slots and an optional
+quota-consuming authenticated smoke check; it remains default-branch-only.

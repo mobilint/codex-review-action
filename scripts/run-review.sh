@@ -22,6 +22,9 @@ ALLOW_UNSAFE_NO_SANDBOX_FALLBACK="${INPUT_ALLOW_UNSAFE_NO_SANDBOX_FALLBACK:-fals
 ALLOWED_OWNER="mobilint"
 USE_UNSANDBOXED_FALLBACK="false"
 normalize_review_runtime_inputs
+MODEL="${INPUT_MODEL:-gpt-6-luna}"
+REASONING_EFFORT="${INPUT_REASONING_EFFORT:-max}"
+normalize_review_model_inputs
 
 WORKDIR="$(create_review_workdir)"
 REPO_DIR="${WORKDIR}/repo"
@@ -262,6 +265,11 @@ run_codex() {
   local prompt_file="$1"
   local output_file="$2"
   local codex_exit=0
+  printf '[INFO] model=%s reasoning_effort=%s\n' "$MODEL" "$REASONING_EFFORT"
+  if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
+    printf 'Codex model: `%s`; reasoning effort: `%s`; runner: `%s`\n' \
+      "$MODEL" "$REASONING_EFFORT" "${RUNNER_NAME:-local}" >> "$GITHUB_STEP_SUMMARY"
+  fi
 
   if [[ "${USE_UNSANDBOXED_FALLBACK}" == "true" ]]; then
     echo "[WARN] running codex without sandbox because sandbox probe failed and allow_unsafe_no_sandbox_fallback=true"
@@ -275,13 +283,13 @@ run_codex() {
   (
     cd "${REPO_DIR}"
     if [[ "${USE_UNSANDBOXED_FALLBACK}" == "true" ]]; then
-      codex exec \
+      execute_review_codex \
         --json \
         --dangerously-bypass-approvals-and-sandbox \
         --output-last-message "${output_file}" \
         "$(cat "${prompt_file}")"
     else
-      codex exec \
+      execute_review_codex \
         --json \
         --sandbox "${SANDBOX_MODE}" \
         --output-last-message "${output_file}" \
