@@ -41,6 +41,8 @@ The maintained inputs are:
 - `ack_reaction_target`
 - `max_files`
 - `max_diff_chars`
+- `model`
+- `reasoning_effort`
 - `sandbox_mode`
 - `allow_unsafe_no_sandbox_fallback`
 
@@ -120,31 +122,40 @@ symlinks. The regression tests cover valid links and hostile alternatives.
 ## Multiple review runners
 
 Register each runner under a distinct name in group `codex`, with custom label
-`codex-reviewer`. Use separate installation and `_work` directories (on this
-server: `~/actions-runner` and `~/actions-runner-2`) and keep both services online.
+`codex-reviewer`. Use separate installation and `_work` directories beneath
+`~/codex-runners/`. The current installation has five services; add or remove
+registrations to change capacity without editing review scheduling policy.
 Each service user needs the tools listed in the action README, Codex credentials,
 and a working read-only sandbox. Shared-host runners share machine capacity;
-adding services does not add CPU or memory. The action uses a unique directory
-under `RUNNER_TEMP`, falling back to `TMPDIR` or `/tmp` outside Actions, and cleans
-up only its own directory. This describes the candidate action in this PR; the
-central deployed pin remains `2454440`, which uses `mktemp -d` under `TMPDIR`
-or `/tmp`. Deploying the candidate requires approval, a direct-action canary,
-and a separate reviewed central pin update. No custom dispatcher or runner-name
-binding is needed.
+adding services does not add CPU, memory, or Codex account quota. The reviewed
+action uses a unique directory under `RUNNER_TEMP`, falling back to `TMPDIR` or
+`/tmp` outside Actions, and cleans up only its own directory. No custom
+dispatcher, runner-name binding, or fixed pool-size policy is needed.
 
-An organization administrator should verify both registrations are online with
+An organization administrator should verify each registration is online with
 the matching label, and that group `codex` permits each consuming repository
 (and its reusable workflow if workflow restrictions are enabled). Listing these
 settings through the REST API requires organization runner administration access;
 ordinary repository access is insufficient.
 
-After the central workflow is merged to the default branch, manually dispatch
-`Check reviewer runner pool` in `mobilint/.github`. It runs two independent jobs
-with `max-parallel: 2`, no checkout and no write permissions. Each checks tools and
-sandbox startup and stays occupied for 20 seconds. When both runners are idle,
-verify distinct runner names and overlapping execution intervals in the two job
-logs. A serial run alone does not prove failure: a runner may have been busy or
-offline. This smoke check does not authenticate a model request or publish a review.
+Manually dispatch `Check reviewer runner pool` from the central repository's
+default branch with a job count matching the capacity you want to inspect. The
+pool size is independent of this diagnostic's count. Choose a requested count
+accepted by the current central workflow's validation; diagnostic input bounds
+are separate from review scheduling policy. Its optional authenticated smoke
+check makes a small Luna/max request and uses account quota; ordinary readiness checks only validate
+tools and sandbox startup. Neither mode publishes a PR review. Keep probe
+batches serialized, with no checkout or write token. Compare distinct runner
+names and overlapping execution intervals when the intended runners are idle;
+completed jobs alone cannot prove simultaneous capacity. Serial execution can
+mean a runner was busy or offline, rather than a scheduling defect.
+
+GitHub's matrix-job bounds are documented in
+[Actions limits](https://docs.github.com/en/actions/reference/limits). Actual
+runner registrations, host resources, trust gates, and per-PR concurrency determine
+review capacity. For current diagnostic input validation and the deployed probe
+revision, consult the central operations guide; probe maintenance is independent
+of this immutable reusable workflow pin.
 
 GitHub schedules eligible jobs, not jobs still waiting at the hosted gate or
 blocked by concurrency. Automatic reviews remain latest-update-wins per PR;
@@ -198,3 +209,76 @@ repeated leading `[P0]`, `[P1]`, or `[P2]` labels from older model output. The
 priority field determines the displayed label even when a title prefix disagrees.
 Labels within title text are preserved. Keep regression coverage at the filtering
 boundary when changing heading formatting.
+
+## Model configuration and rollout status
+
+The action accepts `model` and `reasoning_effort`, defaulting to `gpt-6-luna`
+and `max`. Both sandbox execution paths use validated CLI arguments and
+`--ignore-user-config`; no connectors or interactive profiles are inherited from
+the user config. Project configuration remains subject to Codex's normal trust
+and configuration handling. Model names are limited to 128 ASCII letters,
+digits, dots, underscores, and hyphens, starting with a letter or digit. Effort
+is low/medium/high/xhigh/max. Invalid inputs fall back to the defaults.
+
+This caller rollout proposes central revision
+`17c7413b49c0aa056965bd03850685bb1e59a1b8`, merged through central PR #15
+and verified through the GitHub Contents API. It selects reviewed action
+`c156f3b883e3317f0c5a5a5fa9137f7bc2c07ad1`, merged through action PR #17.
+The exact action passed both modes in
+[canary run 43829681155](https://github.com/mobilint/codex-review-action/actions/runs/43829681155).
+Central routing at that exact SHA also passed the
+[automatic official-first/fallback run](https://github.com/mobilint/codex-review-action/actions/runs/43832639608)
+and [mention run](https://github.com/mobilint/codex-review-action/actions/runs/43833750345).
+Both runs reference central `17c7413`, reached `codex-reviewer-4`, and completed
+with Luna/max in the read-only sandbox and clean reactions. These routing checks
+are separate from the direct-action canary and establish the caller rollout
+provenance.
+After this caller update merges, the repository adopts those revisions; other
+consumers remain on their existing pins until their own reviewed caller PRs
+merge. Updating a central default branch alone never advances an immutable caller.
+
+Historical audit: the former action pin
+`2454440c864b485d23ae3c3a4078f0adb445c497` and pre-rollout action main
+`64ec9f23019340099d0f045e6fc02963fae07ea8` had divergent history. The three
+commits exclusive to that old pin were mode inference and merge commits. The
+reviewed release retains mode inference with regression coverage, adds explicit
+model selection, and passed exact-SHA canaries. Review complete comparisons for
+future releases rather than assuming a fast-forward promotion. New action or
+central changes still require the release/canary/routing/caller sequence above.
+
+Runner installation, capacity checks, and safe add/remove procedures are owned
+by the central [runner operations guide](https://github.com/mobilint/.github/blob/main/.github/MAINTAINERS.md#runner-installation-and-removal).
+Use its versioned `scripts/runner-codex` wrapper when running older actions:
+it supplies configuration defaults rather than duplicate `--model` flags, so
+explicit settings in newer actions take precedence.
+
+## Run exact-SHA canaries
+
+After merging this action, use a controlled open PR in this repository authored
+by the workflow operator, from the same-repository branch
+`test/reviewer-release-canary` into the default branch. The fixed branch is a
+canary allowlist; do not use it for production development. Dispatch the
+default-branch-only manual workflow:
+
+```bash
+gh workflow run canary-review-action.yml -R mobilint/codex-review-action \
+  -f action_sha=FULL_REVIEWED_ACTION_SHA -f pr_number=CONTROLLED_PR_NUMBER
+```
+
+Its hosted preflight requires a 40-hex commit reachable from the default branch
+and the operator-authored, same-repository allowlisted target, using only read
+permissions. Only then does it allocate runners. Write scopes are restricted
+to the canary job. Each matrix job
+uses the immutable checkout v6 revision
+`d23441a48e516b6c34aea4fa41551a30e30af803` (verified against the upstream v6
+ref and signed commit) to check out the verified action revision with credential
+persistence disabled, then invokes the local composite action directly with
+explicit auto/pull_request or
+mention/issue_comment inputs. The mention job creates an actionable
+`@mobilint-review` source comment on the controlled PR. It uses the repository
+workflow token, Luna/max, and read-only
+sandboxing; it never enables the unsafe fallback. This tests action behavior,
+not central event/trust routing. Verify posted reviews or clean reactions,
+runner summaries, and both job conclusions; record the run URL before promoting
+the central action pin. Close a temporary canary PR after testing rather than
+merging its fixture change.

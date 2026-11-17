@@ -96,3 +96,22 @@ create_review_workdir() {
   # invocations when multiple services share a user or a fallback temp root.
   mktemp -d "${RUNNER_TEMP:-${TMPDIR:-/tmp}}/codex-review.XXXXXXXXXX"
 }
+
+normalize_review_model_inputs() {
+  MODEL="${MODEL:-gpt-6-luna}"
+  REASONING_EFFORT="${REASONING_EFFORT:-max}"
+  if [[ ${#MODEL} -gt 128 ]] || ! [[ "$MODEL" =~ ^[a-zA-Z0-9][a-zA-Z0-9._-]*$ ]]; then
+    echo '[WARN] invalid model; using gpt-6-luna' >&2
+    MODEL=gpt-6-luna
+  fi
+  case "$REASONING_EFFORT" in
+    low|medium|high|xhigh|max) ;;
+    *) echo '[WARN] invalid reasoning_effort; using max' >&2; REASONING_EFFORT=max ;;
+  esac
+}
+
+execute_review_codex() {
+  # CLI options keep model selection independent of interactive user settings.
+  codex exec --ignore-user-config --model "$MODEL" \
+    -c "model_reasoning_effort=\"${REASONING_EFFORT}\"" "$@"
+}
